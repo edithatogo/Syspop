@@ -7,6 +7,7 @@ from funcs.proj.population import project_pop_data
 from funcs.proj.utils import copy_others as project_copy_others
 from funcs.proj.validation import pop_validation
 from funcs.proj.work import project_work_data
+from funcs.utils import read_cfg
 from funcs.wrapper import (
     create_geography_wrapper,
     create_hospital_wrapper,
@@ -19,8 +20,6 @@ from funcs.wrapper import (
     create_travel_wrapper,
     create_work_wrapper,
 )
-
-from funcs.utils import read_cfg
 
 
 def import_raw_data(workdir: str, input_cfg: str):

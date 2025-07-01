@@ -1,12 +1,8 @@
 import os
-import time
 from argparse import ArgumentParser
 from os import makedirs
-from os.path import exists, join
+from os.path import join
 from pickle import dump as pickle_dump
-from pickle import load as pickle_load
-from random import randint
-from random import uniform
 from random import uniform as random_uniform
 
 import folium
@@ -15,11 +11,8 @@ import matplotlib.pyplot as plt
 import networkx as nx
 import osmnx as ox
 from networkx.classes.multidigraph import MultiDiGraph
-from numpy import isnan as numpy_isnan
 from pandas import DataFrame
 from pandas import read_parquet as pandas_read_parquet
-from PIL import Image
-from shapely.geometry import LineString
 
 ox.config(use_cache=True, log_console=True)
 
@@ -236,7 +229,6 @@ def interpolate_coordinates2(latlon: list, frames: int):
 
 def interpolate_coordinates(coords, dist=10):
     import geopy.distance
-    import numpy as np
 
     # Initialize the list with the first coordinate
     res = [coords[0]]
@@ -263,10 +255,7 @@ def plot_map(XX):
     import os
 
     import geopandas as gpd
-    import geoplot as gplt
-    import geoplot.crs as gcrs
     import imageio
-    import matplotlib.pyplot as plt
     import pandas as pd
 
     # Assuming XX is your MultiDiGraph

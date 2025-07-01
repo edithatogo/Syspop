@@ -4,14 +4,15 @@ from os.path import exists, join
 from pickle import dump as pickle_dump
 from pickle import load as pickle_load
 
+from pandas import DataFrame
+from pandas import concat as pandas_concat
+from pandas import merge as pandas_merge
+
 from funcs.proj.utils import (
     get_geo_codes,
     process_ethnicity_data,
     process_gender_age_data,
 )
-from pandas import DataFrame
-from pandas import merge as pandas_merge
-from pandas import concat as pandas_concat
 
 
 def obtain_ref_scaler(
@@ -97,7 +98,7 @@ def _eu_melaa_ratio(workdir: str):
 
 def project_pop_data(
     workdir: str,
-    input_cfg: dict, 
+    input_cfg: dict,
     all_years: None or list = [2023, 2028, 2033, 2038, 2043],
 ):
     """

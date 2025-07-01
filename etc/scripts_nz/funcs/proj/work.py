@@ -4,7 +4,6 @@ from os.path import exists, join
 from pickle import dump as pickle_dump
 from pickle import load as pickle_load
 
-from funcs import RAW_DATA
 from pandas import read_csv
 
 

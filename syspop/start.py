@@ -1,39 +1,35 @@
+from copy import deepcopy
 from datetime import datetime
 from os import makedirs
 from os.path import exists, join
 
-
-from pandas import DataFrame
+from pandas import DataFrame, concat
 from pandas import concat as pandas_concat
 from pandas import cut as pandas_cut
 
+from syspop.python.base_pop import base_pop_wrapper
+from syspop.python.commute import assign_agent_to_commute, create_commute_probability
 from syspop.python.diary import (
     create_diary,
     map_loc_to_diary,
     quality_check_diary,
 )
-from syspop.python.utils import merge_syspop_data, setup_logging
-
-
-from syspop.python.base_pop import base_pop_wrapper
 from syspop.python.household import create_households, place_agent_to_household
+from syspop.python.school import create_school
+from syspop.python.shared_space import (
+    create_shared_data,
+    find_nearest_shared_space_from_household,
+    place_agent_to_shared_space_based_on_area,
+    place_agent_to_shared_space_based_on_distance,
+)
+from syspop.python.utils import merge_syspop_data, setup_logging
 from syspop.python.work import (
-    place_agent_to_employee,
     create_employee,
     create_employer,
     create_income,
+    place_agent_to_employee,
     place_agent_to_income,
 )
-from syspop.python.school import create_school
-from syspop.python.commute import create_commute_probability, assign_agent_to_commute
-from syspop.python.shared_space import (
-    place_agent_to_shared_space_based_on_area,
-    find_nearest_shared_space_from_household,
-    create_shared_data,
-    place_agent_to_shared_space_based_on_distance,
-)
-from copy import deepcopy
-from pandas import concat
 
 logger = setup_logging(workdir="")
 
@@ -53,7 +49,7 @@ def diary(
 
     start_t = datetime.now()
 
-    logger.info(f"Diary: reading synthetic population")
+    logger.info("Diary: reading synthetic population")
     syspop_data = merge_syspop_data(output_dir, ["base", "work", "school"])
 
     syspop_data_partitions = [
@@ -76,7 +72,7 @@ def diary(
 
     outputs = pandas_concat(outputs, axis=0, ignore_index=True)
 
-    logger.info(f"Diary: quality check ...")
+    logger.info("Diary: quality check ...")
 
     outputs = quality_check_diary(syspop_data, outputs)
 
@@ -86,7 +82,7 @@ def diary(
 
     outputs.to_parquet(join(output_dir, "syspop_diaries_type.parquet"))
 
-    logger.info(f"Diary: start mapping location to diary ...")
+    logger.info("Diary: start mapping location to diary ...")
     map_loc_to_diary(output_dir)
 
     logger.info(f"Diary: created within {processing_mins} minutes ...")
@@ -285,9 +281,9 @@ def create(
         except KeyError:
             pass
 
-    household_data.to_parquet(join(output_dir, f"household_data.parquet"), index=False)
-    employer_data.to_parquet(join(output_dir, f"employer_data.parquet"), index=False)
-    school_data.to_parquet(join(output_dir, f"school_data.parquet"), index=False)
+    household_data.to_parquet(join(output_dir, "household_data.parquet"), index=False)
+    employer_data.to_parquet(join(output_dir, "employer_data.parquet"), index=False)
+    school_data.to_parquet(join(output_dir, "school_data.parquet"), index=False)
     for shared_space_name in shared_space_data:
         shared_space_data[shared_space_name].to_parquet(
             join(output_dir, f"{shared_space_name}_data.parquet"), index=False

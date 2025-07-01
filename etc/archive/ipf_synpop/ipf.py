@@ -1,7 +1,7 @@
 from copy import deepcopy
 
 from ipfn.ipfn import ipfn
-from pandas import DataFrame, melt, merge
+from pandas import DataFrame, merge
 from scipy.optimize import minimize
 
 

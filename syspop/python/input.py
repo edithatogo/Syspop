@@ -1,11 +1,10 @@
+from os.path import exists, join
 from pickle import load as pickle_load
-from os.path import join, exists
-from os import makedirs
-from pandas import concat as pandas_concat
-from pandas import read_parquet
-from syspop.python import NZ_DATA_DEFAULT
+
 from numpy.random import choice
-from pandas import DataFrame
+from pandas import DataFrame, read_parquet
+
+from syspop.python import NZ_DATA_DEFAULT
 
 
 def new_zealand(

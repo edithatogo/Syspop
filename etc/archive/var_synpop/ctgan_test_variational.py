@@ -1,7 +1,5 @@
 # https://colab.research.google.com/drive/1L6i-JhJK9ROG-KFcyzT9G-8FC3L8y8Lc?usp=sharing#scrollTo=swfU5fHCNQ8I
-import matplotlib.pyplot as plt
 from pandas import DataFrame as pandas_dataframe
-from pandas import merge as pandas_merge
 
 from syspop.python.var.validate import validate_num, validate_percentage
 from syspop.python.var.var import var

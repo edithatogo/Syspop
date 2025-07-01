@@ -1,13 +1,13 @@
 from logging import getLogger
+from uuid import uuid4
 
 from numpy import arange as numpy_arrange
-from pandas import DataFrame
-from syspop.python import SHARED_SPACE_NEAREST_DISTANCE_KM
-from scipy.spatial.distance import cdist
-from pandas import Series
-from numpy.random import choice as numpy_choice
 from numpy import argsort as numpy_argsort
-from uuid import uuid4
+from numpy.random import choice as numpy_choice
+from pandas import DataFrame, Series
+from scipy.spatial.distance import cdist
+
+from syspop.python import SHARED_SPACE_NEAREST_DISTANCE_KM
 
 logger = getLogger()
 
@@ -44,8 +44,8 @@ def create_shared_data(shared_space_data: DataFrame, proc_shared_space_name: str
 
 
 def place_agent_to_shared_space_based_on_area(
-        shared_space_data: DataFrame, 
-        agent: Series, 
+        shared_space_data: DataFrame,
+        agent: Series,
         shared_space_type: str,
         filter_keys: list = [],
         name_key: str = "id",
@@ -78,10 +78,10 @@ def place_agent_to_shared_space_based_on_area(
     if agent[f"area_{shared_space_type}"] is not None:
 
         selected_spaces = shared_space_data[
-            shared_space_data[f"area_{shared_space_type}"] == 
+            shared_space_data[f"area_{shared_space_type}"] ==
             agent[f"area_{shared_space_type}"]
         ]
-         
+
         for proc_filter_key in filter_keys:
             if proc_filter_key in shared_space_data:
                 selected_spaces = selected_spaces[
@@ -100,10 +100,10 @@ def place_agent_to_shared_space_based_on_area(
                     n=1)[name_key].values[0]
             else:
                 selected_space_id = selected_spaces.loc[numpy_choice(
-                    selected_spaces.index, 
+                    selected_spaces.index,
                     p = selected_spaces[weight_key] / selected_spaces[weight_key].sum())][name_key]
 
-    
+
 
     if shared_space_type_convert is not None:
         shared_space_type = shared_space_type_convert[shared_space_type]
@@ -115,7 +115,7 @@ def place_agent_to_shared_space_based_on_area(
 
 
 def find_nearest_shared_space_from_household(
-        household_data: DataFrame, 
+        household_data: DataFrame,
         shared_space_address: DataFrame,
         geography_location: DataFrame,
         shared_space_type: str,
@@ -158,15 +158,15 @@ def find_nearest_shared_space_from_household(
     coords2 = shared_space_address[["latitude", "longitude"]].values
 
     # Compute distances:
-    # distances will be a matrix where each element [i, j] represents the Euclidean distance 
+    # distances will be a matrix where each element [i, j] represents the Euclidean distance
     # between the i-th point in coords1 and the j-th point in coords2.
     distances = cdist(
-        coords1, 
-        coords2, 
+        coords1,
+        coords2,
         metric="euclidean")
 
-    # Find the nearest n indices for each row in household_location_data: 
-    # nearest_indices is an array where each row contains the indices of the n closest points (in coords2) 
+    # Find the nearest n indices for each row in household_location_data:
+    # nearest_indices is an array where each row contains the indices of the n closest points (in coords2)
     # to the corresponding point in coords1.
     nearest_indices = numpy_argsort(distances, axis=1)[:, :n]
 
@@ -184,7 +184,7 @@ def find_nearest_shared_space_from_household(
                 total_missing += 1
                 continue
             proc_names.append(shared_space_address.loc[index][shared_space_type])
-        
+
         if len(proc_names) == 0:
             nearest_names.append("Unknown")
         else:
@@ -198,7 +198,7 @@ def find_nearest_shared_space_from_household(
 
 
 def place_agent_to_shared_space_based_on_distance(
-        agent: Series, 
+        agent: Series,
         shared_space_loc: DataFrame) -> Series:
     """
     Assigns the location of an agent to a shared space based on the area attribute.

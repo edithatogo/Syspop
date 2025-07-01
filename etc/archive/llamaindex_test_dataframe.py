@@ -1,4 +1,3 @@
-import numpy as np
 import pandas as pd
 
 """
@@ -41,7 +40,6 @@ orders_df.to_csv("order_details.csv", index=False)
 """
 
 
-from pickle import load as pickle_load
 
 from llama_index.core import ServiceContext, set_global_service_context
 

@@ -1,9 +1,9 @@
-from random import randint as random_randint
 
-from funcs import LOCATIONS_CFG
-from matplotlib.pyplot import close, cm, gca, legend, savefig, title, xlabel, ylabel
+from matplotlib.pyplot import close, gca, legend, savefig, title, xlabel, ylabel
 from matplotlib.ticker import FuncFormatter
 from pandas import DataFrame
+
+from funcs import LOCATIONS_CFG
 
 
 def plot_diary_percentage(

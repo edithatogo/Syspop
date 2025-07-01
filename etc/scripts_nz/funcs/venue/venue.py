@@ -1,15 +1,10 @@
-from os import makedirs
-from os.path import dirname, exists, join
-from time import sleep
 
-import overpy
-from funcs import RAW_DATA, RAW_DATA_INFO, REGION_NAMES_CONVERSIONS
-from funcs.utils import get_central_point, haversine_distance
-from geopy.geocoders import Nominatim
 from numpy import argmin
-from pandas import DataFrame, merge, read_csv
+from pandas import DataFrame
 from scipy.spatial.distance import cdist
-from funcs.preproc import _read_raw_schools, _read_raw_kindergarten, _read_raw_hospital, _read_original_csv
+
+from funcs.preproc import _read_original_csv, _read_raw_hospital, _read_raw_kindergarten, _read_raw_schools
+from funcs.utils import haversine_distance
 
 
 def create_osm_space(data_path: str, geography_location: DataFrame):

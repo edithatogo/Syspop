@@ -1,7 +1,7 @@
-from pandas import DataFrame
-
 from copy import deepcopy
-from pulp import LpMaximize, LpProblem, LpVariable, lpSum
+
+from pandas import DataFrame
+from pulp import lpSum
 
 
 def add_constrains_shared_space(

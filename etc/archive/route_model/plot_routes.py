@@ -149,4 +149,4 @@ if __name__ == "__main__":
 
         convert_png_to_gif(files_list_hr, join(workdir_vis, f"test_{proc_hr}.gif"), 200)
 
-    convert_png_to_gif(files_list_all, join(workdir_vis, f"test_all.gif"), 150)
+    convert_png_to_gif(files_list_all, join(workdir_vis, "test_all.gif"), 150)

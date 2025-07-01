@@ -3,8 +3,8 @@ from logging import getLogger
 from os.path import basename, join
 from shutil import copyfile
 
-from numpy import arange, isinf
-from pandas import DataFrame, isna, read_csv
+from numpy import arange
+from pandas import DataFrame, read_csv
 
 logger = getLogger()
 

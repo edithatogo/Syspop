@@ -1,25 +1,24 @@
 # export PYTHONPATH=/home/zhangs/Github/Syspop
 
 
-from syspop.python.input import new_zealand
-
-from syspop.start import create as syspop_create
-
 from warnings import filterwarnings
+
+from syspop.python.input import new_zealand
+from syspop.start import create as syspop_create
 
 filterwarnings("ignore")
 
-output_dir = "/tmp/syspop2"
+import argparse
+
+parser = argparse.ArgumentParser()
+parser.add_argument("output_dir", help="The directory to save the generated population to.")
+args = parser.parse_args()
+
+output_dir = args.output_dir
 
 nz_data = new_zealand(apply_pseudo_ethnicity=False)
 
-syn_areas = list(
-    nz_data["geography_hierarchy"][
-        nz_data["geography_hierarchy"]["region"].isin(["Wellington"])
-    ]["area"]
-)
-
-syn_areas = [241800, 242800]
+syn_areas = list(nz_data["geography_hierarchy"]["area"])
 
 syspop_create(
     syn_areas,

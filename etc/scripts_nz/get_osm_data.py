@@ -3,7 +3,6 @@ from json import dump as json_dump
 from os import makedirs
 from os.path import exists, join
 from time import sleep
-from urllib.error import HTTPError
 
 from funcs import RAW_DATA_DIR
 from numpy import nan as numpy_nan

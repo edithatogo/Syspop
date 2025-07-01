@@ -1,28 +1,21 @@
 from logging import getLogger
 from os.path import join
 
-from funcs.household.household import (
-    create_household_and_dwelling_number
-)
+from pandas import read_parquet
+
+from funcs.household.household import create_household_and_dwelling_number
 from funcs.others.health import add_mmr
 from funcs.others.immigration import add_birthplace
 from funcs.population.population import read_population_structure
-from funcs.venue.venue import (
-    create_hospital,
-    create_kindergarten,
-    create_school,
-    create_osm_space
-)
-
-from pandas import read_parquet, read_csv
-
 from funcs.preproc import (
-    _read_raw_address, 
-    _read_raw_geography_hierarchy, 
-    _read_raw_geography_location_area, 
-    _read_raw_travel_to_work, 
+    _read_raw_address,
+    _read_raw_employer_employee_data,
+    _read_raw_geography_hierarchy,
+    _read_raw_geography_location_area,
     _read_raw_income_data,
-    _read_raw_employer_employee_data)
+    _read_raw_travel_to_work,
+)
+from funcs.venue.venue import create_hospital, create_kindergarten, create_osm_space, create_school
 
 logger = getLogger()
 
@@ -107,7 +100,7 @@ def create_hospital_wrapper(workdir: str, input_cfg: dict):
         workdir (str): Working directory
     """
     geography_location = read_parquet(join(workdir, "geography_location.parquet"))
-    hopital_data = create_hospital(input_cfg["venue"]["hospital"], geography_location)    
+    hopital_data = create_hospital(input_cfg["venue"]["hospital"], geography_location)
     hopital_data.to_parquet(join(workdir, "hospital.parquet"))
 
 
@@ -125,7 +118,7 @@ def create_kindergarten_wrapper(workdir: str, input_cfg: dict):
     Args:
         workdir (str): Working directory
     """
-    kindergarten_data = create_kindergarten(input_cfg["venue"]["kindergarten"])    
+    kindergarten_data = create_kindergarten(input_cfg["venue"]["kindergarten"])
     kindergarten_data.to_parquet(join(workdir, "kindergarten.parquet"))
 
 
@@ -148,7 +141,7 @@ def create_school_wrapper(workdir: str, input_cfg: dict):
     geography_location = read_parquet(join(workdir, "geography_location.parquet"))
 
     school_data = create_school(input_cfg["venue"]["school"], geography_location)
-    
+
     school_data.to_parquet(join(workdir, "school.parquet"))
 
 
@@ -185,7 +178,7 @@ def create_work_wrapper(workdir: str, input_cfg: dict):
         workdir (str): Working directory
     """
     data = _read_raw_employer_employee_data(input_cfg["work"]["employer_employee_num"])
-    
+
     data_income = _read_raw_income_data(input_cfg["work"]["income"])
 
     employee_data = data[
@@ -199,7 +192,7 @@ def create_work_wrapper(workdir: str, input_cfg: dict):
     employer_data = data[
         ["area", "business_code", "employer"]
     ].reset_index(drop=True)
-    
+
     employee_data.to_parquet(join(workdir, "work_employee.parquet"))
     employer_data.to_parquet(join(workdir, "work_employer.parquet"))
     data_income.to_parquet(join(workdir, "work_income.parquet"))
@@ -241,7 +234,7 @@ def create_travel_wrapper(workdir: str, input_cfg: dict):
 
     trave_to_school_data = _read_raw_travel_to_work(
         input_cfg["commute"]["travel_to_school"], data_type="school")
-    
+
     trave_to_work_data.to_parquet(join(workdir, "commute_travel_to_work.parquet"))
     trave_to_school_data.to_parquet(join(workdir, "commute_travel_to_school.parquet"))
 
@@ -329,9 +322,9 @@ def create_geography_wrapper(workdir: str, input_cfg: dict, include_address: boo
         }
     if include_address:
         output["address"] = _read_raw_address(
-            input_cfg["geography"]["sa2_area_data"], 
+            input_cfg["geography"]["sa2_area_data"],
             input_cfg["geography"]["address_data"])
-    
+
     output["hierarchy"].to_parquet(join(workdir, "geography_hierarchy.parquet"))
     output["location"].to_parquet(join(workdir, "geography_location.parquet"))
     output["address"].to_parquet(join(workdir, "geography_address.parquet"))

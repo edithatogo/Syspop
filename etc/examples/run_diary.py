@@ -1,8 +1,10 @@
 
 
-from syspop.start import diary as syspop_diary
-from syspop.python import input as syspop_input
 from warnings import filterwarnings
+
+from syspop.python import input as syspop_input
+from syspop.start import diary as syspop_diary
+
 filterwarnings("ignore")
 
 output_dir = "/tmp/syspop_test17/Wellington_test_v2.0"

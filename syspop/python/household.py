@@ -1,7 +1,8 @@
 from logging import getLogger
-from pandas import DataFrame, Series
-from random import choices as random_choices
 from uuid import uuid4
+
+from pandas import DataFrame, Series
+
 from syspop.python.utils import select_place_with_contstrain
 
 logger = getLogger()

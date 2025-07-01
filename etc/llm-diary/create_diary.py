@@ -1,6 +1,5 @@
 from argparse import ArgumentParser
 from datetime import datetime
-from logging import Logger
 from os import makedirs
 from os.path import exists, join
 from pickle import dump as pickle_dump

@@ -1,7 +1,6 @@
 from datetime import datetime
 from logging import getLogger
 
-from numpy.random import choice
 from pandas import DataFrame
 
 logger = getLogger()

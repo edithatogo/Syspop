@@ -37,7 +37,7 @@ for i in range(0, len(all_ids), SELECTED_PEOPLE_EACH_BATCH):
     selected_areas = " ".join(str(item) for item in AREA_IDS)
 
     cmd = (
-        f"python /home/zhangs/Github/Syspop/etc/route_model/create_routes.py "
+        "python /home/zhangs/Github/Syspop/etc/route_model/create_routes.py "
         + f"--workdir {WORKDIR} "
         + f"--area_ids {selected_areas} "
         + f"--people_ids {selected_ids} "
@@ -61,6 +61,6 @@ submit(
     memory_per_node=8000,
     job_priority="default",
     partition="prod",
-    workdir=f"/home/zhangs/Github/Syspop/etc/route_model/slurm_jobs",
+    workdir="/home/zhangs/Github/Syspop/etc/route_model/slurm_jobs",
     debug=False,
 )

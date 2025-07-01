@@ -1,11 +1,11 @@
 from logging import getLogger
 
-from funcs import DEFAULT_MODEL_NAME, LOCATIONS_CFG, PROMPT_QUESTION
 from llama_cpp import Llama
 from numpy.random import choice as numpy_choice
-from pandas import DataFrame
+from pandas import DataFrame, date_range, to_datetime
 from pandas import concat as pandas_concat
-from pandas import date_range, to_datetime
+
+from funcs import DEFAULT_MODEL_NAME, LOCATIONS_CFG, PROMPT_QUESTION
 
 logger = getLogger()
 

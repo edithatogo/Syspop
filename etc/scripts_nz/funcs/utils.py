@@ -1,12 +1,10 @@
 from copy import deepcopy
-from math import ceil as math_ceil
-from os.path import join
-from re import match as re_match
 
-from numpy import arctan2, argmin, cos, inf, nan, radians, sin, sqrt, unique
-from pandas import DataFrame, concat, melt, merge, read_csv, read_excel, to_numeric
+from numpy import arctan2, cos, nan, radians, sin, sqrt
+from pandas import DataFrame, read_csv, read_excel
 from shapely.wkt import loads as wkt_loads
 from yaml import safe_load
+
 
 def sort_column_by_names(data_input: DataFrame, columns_to_exclude: list):
     cols = list(data_input.columns)

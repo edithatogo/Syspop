@@ -10,6 +10,7 @@ from numpy.random import normal as numpy_normal
 from pandas import DataFrame
 from pandas import merge as pandas_merge
 from pandas import read_parquet as pandas_read_parquet
+
 from syspop.python import DIARY_CFG, MAPING_DIARY_CFG_LLM_DIARY
 from syspop.python.utils import merge_syspop_data, round_a_datetime
 
@@ -358,8 +359,8 @@ def map_loc_to_diary(output_dir: str):
     time_start = datetime.utcnow()
 
     def _match_person_diary(
-        proc_people: DataFrame, 
-        known_missing_locs: list = ["gym", "others", "outdoor"], 
+        proc_people: DataFrame,
+        known_missing_locs: list = ["gym", "others", "outdoor"],
         proc_diray_mapping = {
             "kindergarten": "school",
             "company": "employer"

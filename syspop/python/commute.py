@@ -1,14 +1,14 @@
 from logging import getLogger
+
 from numpy.random import choice as numpy_choice
-from pandas import DataFrame
-from pandas import Series
+from pandas import DataFrame, Series
 
 logger = getLogger()
 
 
 def create_commute_probability(
-        commute_dataset: DataFrame, 
-        areas: list, 
+        commute_dataset: DataFrame,
+        areas: list,
         commute_type: str = "work") -> DataFrame:
     """
     Calculates commute probabilities for specified areas and commute type.
@@ -37,7 +37,7 @@ def create_commute_probability(
 
 
 def assign_agent_to_commute(
-        commute_dataset: DataFrame, 
+        commute_dataset: DataFrame,
         agent: Series,
         commute_type: str = "work",
         include_filters: dict = {}) -> Series:
@@ -81,7 +81,7 @@ def assign_agent_to_commute(
                 agent[f"area_{commute_type}"] = None
                 agent[f"travel_method_{commute_type}"] = None
                 return agent
-        
+
     proc_commute_dataset = commute_dataset[commute_dataset.area_home == agent.area]
     proc_commute_dataset["total"] = proc_commute_dataset.drop(
         columns=["area_home", f"area_{commute_type}"]).sum(axis=1)

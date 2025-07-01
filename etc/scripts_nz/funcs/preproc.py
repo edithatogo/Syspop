@@ -1,11 +1,11 @@
 
-from pandas import DataFrame, concat, read_csv, read_excel, to_numeric
-from math import ceil as math_ceil
-
 from geopandas import read_file as gpd_read_file
 from geopandas import sjoin as gpd_sjoin
-from funcs import REGION_CODES, REGION_NAMES_CONVERSIONS, RAW_DATA_INFO, POPULATION_CODE
+from pandas import DataFrame, read_csv
+
+from funcs import POPULATION_CODE, RAW_DATA_INFO, REGION_CODES, REGION_NAMES_CONVERSIONS
 from funcs.utils import get_central_point
+
 
 def _read_raw_household(raw_household_path, include_public_dwelling: bool = False) -> DataFrame:
     """
@@ -59,7 +59,7 @@ def _read_raw_household(raw_household_path, include_public_dwelling: bool = Fals
     data = data.groupby(["area", "adults", "children"], as_index=False)["value"].sum()
 
     return data[["area", "adults", "children", "value"]]
-        
+
 
 def _read_raw_address(raw_sa2_area_path: str, raw_address_path: str):
     """
@@ -307,14 +307,14 @@ def _read_raw_employer_employee_data(employer_employee_num_path: str) -> DataFra
     data["area"] = data["area"].str[1:].astype(int)
 
     data = data.rename(columns={
-        "anzsic06": "business_code", 
-        "ec_count": "employee", 
+        "anzsic06": "business_code",
+        "ec_count": "employee",
         "geo_count": "employer"})
 
     return data[[
         "area",
-        "business_code", 
-        "employer", 
+        "business_code",
+        "employer",
         "employee"]
     ]
 

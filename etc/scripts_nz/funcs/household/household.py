@@ -1,10 +1,4 @@
-from os.path import join
-from pickle import dump as pickle_dump
-from random import randint as random_randint
 
-from funcs import DEPENDENT_CHILDREN_COUNT_CODE, RAW_DATA
-from pandas import isnull as pandas_isnull
-from pandas import read_csv
 
 from funcs.preproc import _read_raw_household
 

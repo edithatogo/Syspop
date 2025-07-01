@@ -1,6 +1,4 @@
-import re
-import time
-from typing import List, Optional
+from typing import Optional
 
 from llama_cpp import Llama, LogitsProcessorList
 from lmformatenforcer import CharacterLevelParser, JsonSchemaParser
@@ -50,7 +48,7 @@ def summarize_texts(question: str, answer: str):
     question_fmt = (
         f"The question is {question}. "
         + f"From the dataset, I got the answer as {answer}. "
-        + f"Please convert the above into a declarative sentence/paragraph, and make it more illustrative"
+        + "Please convert the above into a declarative sentence/paragraph, and make it more illustrative"
     )
 
     question_with_schema = f"{question_fmt}{AnswerFormat.schema_json()}"

@@ -1,8 +1,9 @@
 
 from logging import getLogger
-
-from pandas import Series, DataFrame
 from uuid import uuid4
+
+from pandas import DataFrame, Series
+
 logger = getLogger()
 
 def create_income(income_dataset: DataFrame) -> DataFrame:
@@ -80,7 +81,7 @@ def create_employer(employer_dataset: DataFrame, address_data: DataFrame, all_ar
                 "longitude": float(proc_address_data.longitude),
                 "employer": str(uuid4())[:6]  # Create a 6-digit unique ID
             })
-    
+
     return DataFrame(employer_datasets)
 
 
@@ -115,7 +116,7 @@ def place_agent_to_employee(employee_data: DataFrame, agent: Series) -> Series:
         else:
             proc_employee_weight = proc_employee_data["employee"] / total_employee
             selected_code = proc_employee_data.sample(
-                    n=1, 
+                    n=1,
                     weights=proc_employee_weight)["business_code"].values[0]
 
     agent["business_code"] = selected_code
@@ -157,19 +158,19 @@ def place_agent_to_income(income_data: DataFrame, agent: Series) -> Series:
             income_data[item] = income_data[item].astype(int)
 
         proc_income_data = income_data[
-            (income_data["gender"] == agent.gender) & 
-            ((income_data["business_code1"] == agent.business_code) | (income_data["business_code2"] == agent.business_code)) & 
+            (income_data["gender"] == agent.gender) &
+            ((income_data["business_code1"] == agent.business_code) | (income_data["business_code2"] == agent.business_code)) &
             (income_data["ethnicity"] == agent.ethnicity) &
             ((agent.age >= income_data["age1"]) & (agent.age <= income_data["age2"]) )]
 
         if len(proc_income_data) > 1:
             raise Exception("Income data decoding error ...")
-    
+
         if len(proc_income_data) == 0:
             selected_income = "Unknown"
         else:
             selected_income = proc_income_data["value"].values[0]
 
         agent["income"] = str(selected_income) # we can't have nan, unknown and a numerical value together in a parquet
-    
+
     return agent

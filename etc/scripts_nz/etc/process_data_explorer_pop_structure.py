@@ -1,6 +1,6 @@
 # -------------------------------------------------
 # Data Explorer is the new way to get aggregated data from Stats NZ,
-# however the data downloaded directly from there usually come with 
+# however the data downloaded directly from there usually come with
 # many unrelated information
 #
 # This script is used to clean up the downloaded data from Data Explorer
@@ -17,8 +17,8 @@ population_structure_data_path = "/Users/sijinzhang/Downloads/STATSNZ,CEN23_POP_
 population_structure_data = read_csv(population_structure_data_path)
 
 population_structure_data = population_structure_data[
-    ["CEN23_YEAR_001: Census year", 
-     "CEN23_CNA_002: Census night address", 
+    ["CEN23_YEAR_001: Census year",
+     "CEN23_CNA_002: Census night address",
      "CEN23_ETH_002: Ethnicity",
      "CEN23_AGE_001: Age",
      "CEN23_GEN_002: Gender",

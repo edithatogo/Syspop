@@ -1,10 +1,8 @@
 
 from logging import getLogger
-
+from uuid import uuid4
 
 from pandas import DataFrame
-
-from uuid import uuid4
 
 logger = getLogger()
 
@@ -56,5 +54,5 @@ def create_school(school_data: DataFrame, max_student_num: int = 30) -> DataFram
             "max_students": int(max_students),
             "school": str(name)
         })
-    
+
     return DataFrame(schools)
