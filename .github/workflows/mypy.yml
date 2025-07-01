@@ -1,0 +1,28 @@
+name: MyPy Type Checking
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  typecheck:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.x'
+
+    - name: Install MyPy
+      run: pip install mypy
+
+    - name: Run MyPy
+      run: mypy syspop/python/ syspop/etc/scripts_nz/
