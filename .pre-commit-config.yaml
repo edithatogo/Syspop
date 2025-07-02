@@ -1,0 +1,30 @@
+repos:
+-   repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: 'v0.4.4' # Use a specific version for stability
+    hooks:
+    -   id: ruff
+        args: [--fix, --exit-non-zero-on-fix]
+    -   id: ruff-format
+-   repo: https://github.com/pre-commit/mirrors-mypy
+    rev: 'v1.10.0' # Use a specific version
+    hooks:
+    -   id: mypy
+        args: [--ignore-missing-imports]
+        # additional_dependencies can be added here if mypy needs packages not in the main env
+        # For example: additional_dependencies: ['types-requests']
+-   repo: https://github.com/PyCQA/bandit
+    rev: '1.7.8' # Use a specific version
+    hooks:
+    -   id: bandit
+        args: ["-r", ".", "-s", "B101"] # Example: skip assert_used check
+        # files: '^syspop/.*\.py$' # Example: only run on specific paths
+-   repo: https://github.com/jendrikseipp/vulture
+    rev: 'v2.11' # Use a specific version
+    hooks:
+    -   id: vulture
+        args: ["--min-confidence", "80"]
+        # files: '^syspop/.*\.py$' # Example: only run on specific paths
+
+# To use these hooks, run:
+# 1. pip install pre-commit (or pipx install pre-commit)
+# 2. pre-commit install

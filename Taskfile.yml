@@ -1,0 +1,19 @@
+version: '3'
+
+tasks:
+  lint:
+    cmds:
+      - poetry run ruff check .
+      - poetry run bandit -r .
+      - poetry run vulture . --min-confidence 80
+  test:
+    cmds:
+      - poetry run mypy syspop/python/ syspop/etc/scripts_nz/
+  format:
+    cmds:
+      - poetry run ruff format .
+  all:
+    cmds:
+      - task: format
+      - task: lint
+      - task: test

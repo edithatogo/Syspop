@@ -1,0 +1,55 @@
+[project]
+name = "syspop"
+version = "0.3.0"
+description = "A system for population synthesis"
+authors = ["Noa <noa@example.com>"]
+channels = ["conda-forge"]
+platforms = ["linux-64", "osx-64", "win-64", "osx-arm64"]
+
+[feature.uv.dependencies]
+uv = ">=0.1.16"
+
+[dependencies]
+python = ">=3.10,<3.13"
+numpy = "*"
+pandas = "*"
+matplotlib = "*"
+pyarrow = "*"
+overpy = "*"
+geopy = "*"
+scipy = "*"
+shapely = "*"
+openpyxl = "*"
+ray-default = "*" # Adjusted for Pixi/conda
+xlrd = "*"
+osmpythontools = "*"
+folium = "*"
+seaborn = "*"
+geopandas = "*"
+ruff = "*"
+mypy = "*"
+bandit = "*"
+vulture = "*"
+poetry = "*" # For poetry commands if still needed, or manage scripts via pixi tasks
+task = "*"   # For go-task if still needed
+
+[tasks]
+lint = "ruff check . && bandit -r . && vulture . --min-confidence 80"
+format = "ruff format ."
+test = "mypy syspop/python/ syspop/etc/scripts_nz/"
+all = "pixi run format && pixi run lint && pixi run test"
+
+[scripts]
+syspop = { cmd = "python -m syspop.syspop create" } # Example, adjust if syspop is a direct executable after poetry/pixi build
+
+[target.linux-64.dependencies]
+# Linux specific dependencies if any
+
+[target.osx-64.dependencies]
+# macOS specific dependencies if any
+
+[target.win-64.dependencies]
+# Windows specific dependencies if any
+
+[target.osx-arm64.dependencies]
+# macOS ARM specific dependencies if any

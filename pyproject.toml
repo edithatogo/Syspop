@@ -1,0 +1,42 @@
+[project]
+name = "syspop"
+version = "0.3.0"
+description = "A system for population synthesis"
+authors = [
+    {name = "Noa",email = "noa@example.com"}
+]
+readme = "README.md"
+requires-python = "^3.10"
+packages = [
+    { include = "syspop" }
+]
+dependencies = [
+    "numpy",
+    "pandas",
+    "matplotlib",
+    "pyarrow",
+    "overpy",
+    "geopy",
+    "scipy",
+    "shapely",
+    "openpyxl",
+    "ray[default]",
+    "xlrd",
+    "OSMPythonTools",
+    "folium",
+    "seaborn",
+    "geopandas"
+]
+
+[tool.poetry.scripts]
+syspop = "syspop.syspop:create"
+
+[tool.poetry.group.dev.dependencies]
+ruff = "*"
+mypy = "*"
+bandit = "*"
+vulture = "*"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
