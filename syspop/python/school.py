@@ -8,26 +8,25 @@ logger = getLogger()
 
 def create_school(school_data: DataFrame, max_student_num: int = 30) -> DataFrame:
     """
-    Create a DataFrame of schools filtered by specified areas.
+    Transforms raw school data into a structured DataFrame of individual school entities.
 
-    This function filters the provided school data based on a list of allowed areas,
-    then constructs a new DataFrame containing relevant details about each school,
-    including its area, minimum and maximum age range, and a unique identifier.
+    Each row in the input `school_data` is processed to create a dictionary
+    representing a school. A unique ID is generated for each school, prefixed
+    by its 'sector'. If a school's 'max_students' is less than `max_student_num`,
+    it's set to `max_student_num`.
 
-    Parameters:
-    ----------
-    school_data : DataFrame
-        A DataFrame containing school information, including 'area_school',
-        'age_min', 'age_max', and 'sector'.
+    Args:
+        school_data (DataFrame): A DataFrame containing raw school information.
+            Expected columns: 'area', 'age_min', 'age_max', 'sector',
+            'latitude', 'longitude', 'max_students'.
+        max_student_num (int, optional): The minimum value for 'max_students'.
+            If a school's 'max_students' is below this, it's adjusted upwards.
+            Defaults to 30.
 
     Returns:
-    -------
-    DataFrame
-        A DataFrame containing the filtered school data with the following columns:
-        - area_school: int, the area code of the school
-        - age_min: int, the minimum age for students
-        - age_max: int, the maximum age for students
-        - id: str, a unique identifier for the school
+        DataFrame: A DataFrame where each row is a school. Columns:
+            'area_school' (renamed from 'area'), 'age_min', 'age_max',
+            'latitude', 'longitude', 'max_students', 'school' (unique ID).
     """
     schools = []
 

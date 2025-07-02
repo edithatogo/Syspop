@@ -7,35 +7,22 @@ from funcs import POPULATION_CODE, RAW_DATA_INFO, REGION_CODES, REGION_NAMES_CON
 from funcs.utils import get_central_point
 
 
-def _read_raw_household(raw_household_path, include_public_dwelling: bool = False) -> DataFrame:
+def _read_raw_household(raw_household_path: str, include_public_dwelling: bool = False) -> DataFrame:
     """
-    Reads and processes raw household data from a CSV file.
+    Reads and processes a raw household CSV file to count households by
+    area, number of adults, and number of children.
 
-    Parameters:
-        raw_household_path (str): The file path to the raw household CSV data.
-        include_public_dwelling (bool): If True, includes public dwellings in the data. Defaults to False.
+    The input CSV is expected to have columns like 'SA2 Code', 'Number of people',
+    'Number of adults', 'Dwelling type', and 'Count'.
+
+    Args:
+        raw_household_path (str): Path to the raw household CSV data.
+        include_public_dwelling (bool, optional): If True, includes dwellings
+            marked as public (dwelling_type >= 2000). Defaults to False.
 
     Returns:
-        DataFrame: A DataFrame containing the processed household data with columns for area, number of adults, number of children, and count of households.
-    
-    The output looks sth like:
-             area  adults  children  num
-    0      100100       0         1    3
-    1      100100       0         2    4
-    2      100100       1         0  142
-    3      100100       1         1   14
-    4      100100       1         2   15
-    ...       ...     ...       ...  ...
-    53773  363300       4         2    3
-
-    The function performs the following steps:
-    1. Reads the CSV file from the given path.
-    2. Renames columns for better readability.
-    3. Filters out public dwellings if include_public_dwelling is False.
-    4. Converts the 'adults' and 'people' columns to integers.
-    5. Calculates the number of children by subtracting adults from people.
-    6. Groups the data by area, number of adults, and number of children, summing the household counts.
-    7. Returns the processed DataFrame with selected columns.
+        DataFrame: A DataFrame with columns ['area', 'adults', 'children', 'value'],
+                   where 'value' is the count of households with that composition.
     """
     data = read_csv(raw_household_path)
 
@@ -61,27 +48,22 @@ def _read_raw_household(raw_household_path, include_public_dwelling: bool = Fals
     return data[["area", "adults", "children", "value"]]
 
 
-def _read_raw_address(raw_sa2_area_path: str, raw_address_path: str):
+def _read_raw_address(raw_sa2_area_path: str, raw_address_path: str) -> DataFrame:
     """
-    Reads and processes raw spatial data files for SA2 areas and addresses, 
-    transforming them into a combined DataFrame with latitude and longitude coordinates.
+    Performs a spatial join between address points and SA2 area polygons
+    to assign an SA2 area to each address.
 
-    Parameters:
-        raw_sa2_area_path (str): The file path to the raw SA2 area data.
-        raw_address_path (str): The file path to the raw address data.
+    The input files are expected to be GeoJSON or Shapefiles readable by GeoPandas.
+    SA2 area data should have an 'SA22022_V1' column for the SA2 code.
+    Address data should contain point geometries.
 
-    The output looks like:
-                                geometry  index_right    area   longitude   latitude
-    0        POINT (174.75596 -36.86515)          831  136000  174.755962 -36.865148
-    1        POINT (174.75620 -36.86539)          831  136000  174.756203 -36.865394
-    2        POINT (170.50644 -45.89642)          444  354700  170.506439 -45.896419
-    3        POINT (172.68243 -43.56910)         2018  331400  172.682428 -43.569101
-    4        POINT (172.68265 -43.56881)         2018  331400  172.682646 -43.568808
-    ...                              ...          ...     ...         ...        ...
+    Args:
+        raw_sa2_area_path (str): Path to the SA2 area geometry file.
+        raw_address_path (str): Path to the address point geometry file.
 
     Returns:
-        pandas.DataFrame: A DataFrame containing the SA2 area, latitude, and longitude 
-                        for each address within the SA2 areas.
+        DataFrame: A DataFrame with columns ['area', 'latitude', 'longitude']
+                   for each address point that falls within an SA2 area.
     """
     sa2_data = gpd_read_file(raw_sa2_area_path)
     address_data = gpd_read_file(raw_address_path)
@@ -104,31 +86,26 @@ def _read_raw_address(raw_sa2_area_path: str, raw_address_path: str):
     return combined_df[["area", "latitude", "longitude"]]
 
 
-def _read_raw_geography_hierarchy(raw_geography_hierarchy_path: str):
-    """Create geography
+def _read_raw_geography_hierarchy(raw_geography_hierarchy_path: str) -> DataFrame:
+    """
+    Reads a raw geography hierarchy CSV file and processes it to create a
+    DataFrame mapping regions, super_areas (SA3), and areas (SA2).
 
-    The output looks like:
-        region super_area    area
-    0   aa        50010  100100
-    3   bb        50010  100200
-    6   cc        50010  100600
-    8   dd        50030  100400
-    10  ee        50030  101000
-    ...           ...     ...
+    The input CSV is expected to have columns 'REGC2023_code', 'SA32023_code',
+    'SA32023_name', and 'SA22018_code'.
+    It filters out 'Others' regions, maps region codes to names using
+    REGION_NAMES_CONVERSIONS, and removes duplicated areas.
 
     Args:
-        raw_geography_hierarchy_path (str): geograph hierarchy data path
+        raw_geography_hierarchy_path (str): Path to the raw geography
+                                              hierarchy CSV data.
+
+    Returns:
+        DataFrame: A DataFrame with columns ['region', 'super_area', 'area'].
     """
 
-    def _map_codes2(code: str) -> list:
-        """Create a mapping function
-
-        Args:
-            code (str): Regional code to be mapped
-
-        Returns:
-            list: The list contains north and south island
-        """
+    def _map_codes2(code: str) -> str | None:
+        """Maps regional code to region name."""
         for key, values in REGION_NAMES_CONVERSIONS.items():
             if code == key:
                 return values
@@ -158,30 +135,20 @@ def _read_raw_geography_hierarchy(raw_geography_hierarchy_path: str):
     return data[["region", "super_area", "area"]]
 
 
-def _read_raw_geography_location_area(raw_geography_location_path: str):
+def _read_raw_geography_location_area(raw_geography_location_path: str) -> DataFrame:
     """
-    Reads and processes raw geography location data from a CSV file.
+    Reads a raw geography location CSV file and extracts SA2 area codes
+    with their corresponding latitudes and longitudes.
 
-    Parameters:
-        raw_geography_location_path (str): The file path to the raw geography location CSV data.
+    The input CSV is expected to have columns 'SA22018_V1_00' (SA2 code),
+    'LATITUDE', and 'LONGITUDE'.
+
+    Args:
+        raw_geography_location_path (str): Path to the raw geography
+                                              location CSV data.
 
     Returns:
-        DataFrame: A DataFrame containing the processed geography location data with columns for area, latitude, and longitude.
-    
-    The output looks like:
-            area   latitude   longitude
-    0     100100 -34.505453  172.775550
-    1     100200 -34.916277  173.137443
-    2     100300 -35.218501  174.158249
-    3     100400 -34.995278  173.378738
-    4     100500 -35.123147  173.218604
-    ...
-
-    The function performs the following steps:
-    1. Reads the CSV file from the given path.
-    2. Selects the relevant columns: 'SA22018_V1_00', 'LATITUDE', and 'LONGITUDE'.
-    3. Renames the selected columns for better readability.
-    4. Returns the processed DataFrame.
+        DataFrame: A DataFrame with columns ['area', 'latitude', 'longitude'].
     """
     data = read_csv(raw_geography_location_path)
 
@@ -199,18 +166,23 @@ def _read_raw_geography_location_area(raw_geography_location_path: str):
 
 
 def _read_raw_travel_to_work(raw_travel_to_work_path: str, data_type: str = "work") -> DataFrame:
-    """Write Transport Model file
+    """
+    Reads and processes a raw travel-to-work or travel-to-school CSV file,
+    extracting relevant columns and renaming them for consistency.
 
-    The output looks like:
-        area_home  area_work  Work_at_home  ....  Train  Bicycle  Walk_or_jog  Ferry  Other
-    0         100100     100100          ...       0        0           21      0      6
-    1         100200     100200          ...       0        0           12      0      0
-    2         100400     100400          ...       0        0            0      0      5
-    ...      
+    The input CSV is expected to contain columns for origin SA2 code,
+    destination SA2 code (either workplace or educational address), and counts
+    for various travel modes.
 
     Args:
-        workdir (str): Working directory
-        transport_mode_cfg (dict): Transport model configuration
+        raw_travel_to_work_path (str): Path to the raw travel CSV data.
+        data_type (str, optional): Specifies the type of travel, either "work"
+                                   or "school". Defaults to "work".
+
+    Returns:
+        DataFrame: A processed DataFrame containing travel mode counts between
+                   origin and destination areas. Columns are standardized.
+                   Replaces -999.0 with 0.
     """
 
     data = read_csv(raw_travel_to_work_path)
@@ -265,13 +237,15 @@ def _read_raw_travel_to_work(raw_travel_to_work_path: str, data_type: str = "wor
 
 
 def _read_raw_income_data(income_path: str) -> DataFrame:
-    """_summary_
+    """
+    Reads a raw income CSV file, renames the 'sex' column to 'gender',
+    and replaces coded values with their string representations using POPULATION_CODE.
 
     Args:
-        income_path (str): _description_
+        income_path (str): Path to the raw income CSV data.
 
     Returns:
-        DataFrame: _description_
+        DataFrame: Processed income DataFrame.
     """
     data_income = read_csv(income_path).reset_index(drop=True)
     data_income = data_income.rename(columns={"sex": "gender"})
@@ -279,21 +253,22 @@ def _read_raw_income_data(income_path: str) -> DataFrame:
     return data_income
 
 def _read_raw_employer_employee_data(employer_employee_num_path: str) -> DataFrame:
-    """Write the number of employees by gender for different area
+    """
+    Reads a raw CSV file containing employer and employee counts by ANZSIC06
+    business code and area.
 
-    The output looks like:
-            area business_code           employee         employer
-    0       100100             A              190               93
-    1       100200             A              190              138
-    2       100300             A               25                6
-    3       100400             A               50               57
-    4       100500             A               95               57
-    ...        ...           ...              ...              ...
+    The input CSV is expected to have columns 'anzsic06', 'Area', 'ec_count'
+    (employee count), and 'geo_count' (employer count).
+    It filters for top-level ANZSIC codes (single character) and areas
+    starting with 'A', then renames columns for clarity.
 
     Args:
-        workdir (str): Working directory
-        employees_cfg (dict): Configuration
-        use_sa3_as_super_area (bool): If apply SA3 as super area, otherwise using regions
+        employer_employee_num_path (str): Path to the raw employer/employee
+                                           count CSV data.
+
+    Returns:
+        DataFrame: A DataFrame with columns ['area', 'business_code',
+                   'employer', 'employee'].
     """
 
     data = read_csv(
@@ -320,35 +295,21 @@ def _read_raw_employer_employee_data(employer_employee_num_path: str) -> DataFra
 
 
 def _read_raw_schools(school_data_path: str) -> DataFrame:
-
     """
-    Reads and processes raw New Zealand school data from a CSV file.
+    Reads and processes a raw school data CSV file.
 
-    This function reads a CSV file containing school data, filters the data to include only schools,
-    excludes certain types of schools, maps the 'use_type' to a more detailed classification,
-    and extracts relevant information such as sector, age range, and geographical coordinates.
+    Filters for entries where 'use' is 'School', excludes specific 'use_type'
+    categories (e.g., "Teen Parent Unit"), maps 'use_type' to a standardized
+    sector and age range using `RAW_DATA_INFO`, and extracts coordinates.
 
     Args:
-        school_data_path (str): The file path to the CSV file containing the raw school data.
-
-    The output is sth like:
-            estimated_occupancy age_min age_max   latitude   longitude             sector
-        0                     0.0      14      19 -36.851138  174.760643          secondary
-        1                   906.0       5      19 -36.841742  175.696738  primary_secondary
-        3                    24.0       5      13 -46.207408  168.541883            primary
-        8                   247.0       5      19 -34.994245  173.463766  primary_secondary
-        9                  1440.0      14      19 -35.713358  174.318881          secondary
-        ...                   ...     ...     ...        ...         ...                ...
+        school_data_path (str): Path to the raw school CSV data. The CSV should
+                                contain 'use', 'use_type', 'WKT' (Well-Known Text
+                                for geometry), and 'estimated_occupancy' columns.
 
     Returns:
-        DataFrame: A pandas DataFrame containing the processed school data with the following columns:
-            - estimated_occupancy: The estimated occupancy of the school.
-            - age_min: The minimum age of students at the school.
-            - age_max: The maximum age of students at the school.
-            - latitude: The latitude of the school's central point.
-            - longitude: The longitude of the school's central point.
-            - sector: The sector of the school (e.g., primary, secondary).
-
+        DataFrame: A DataFrame with columns ['estimated_occupancy', 'age_min',
+                   'age_max', 'latitude', 'longitude', 'sector'].
     """
 
     data = read_csv(school_data_path)
@@ -386,34 +347,18 @@ def _read_raw_schools(school_data_path: str) -> DataFrame:
 
 def _read_raw_kindergarten(raw_kindergarten_path: str) -> DataFrame:
     """
-    Reads and processes raw New Zealand kindergarten data from a CSV file.
+    Reads and processes a raw kindergarten CSV file.
 
-    This function reads a CSV file containing kindergarten data, filters the data to include only
-    kindergartens with more than 15 licensed positions, and extracts relevant information such as
-    area code, maximum licensed positions, and geographical coordinates. It also adds additional
-    columns for sector and age range.
-
-    The output looks like:
-                area  max_students   latitude   longitude        sector  age_min  age_max
-        0     100800            30 -35.118228  173.258565  kindergarten        0        5
-        1     101100            30 -34.994478  173.464730  kindergarten        0        5
-        2     100700            30 -35.116080  173.270685  kindergarten        0        5
-        3     103500            30 -35.405553  173.796409  kindergarten        0        5
-        4     103900            30 -35.278121  174.081808  kindergarten        0        5
-        .....
+    Filters for kindergartens with more than 15 licensed positions.
+    Extracts 'Statistical Area 2 Code', 'Max. Licenced Positions', 'Latitude',
+    and 'Longitude'. Renames columns and adds 'sector', 'age_min', 'age_max'.
 
     Args:
-        raw_kindergarten_path (str): The file path to the CSV file containing the raw kindergarten data.
+        raw_kindergarten_path (str): Path to the raw kindergarten CSV data.
 
     Returns:
-        DataFrame: A pandas DataFrame containing the processed kindergarten data with the following columns:
-            - area: The statistical area code.
-            - max_students: The maximum number of licensed positions.
-            - latitude: The latitude of the kindergarten.
-            - longitude: The longitude of the kindergarten.
-            - sector: The sector of the institution (set to 'kindergarten').
-            - age_min: The minimum age of students (set to 0).
-            - age_max: The maximum age of students (set to 5).
+        DataFrame: A DataFrame with columns ['area', 'max_students', 'latitude',
+                   'longitude', 'sector', 'age_min', 'age_max'].
     """
     df = read_csv(raw_kindergarten_path)
 
@@ -449,19 +394,21 @@ def _read_raw_kindergarten(raw_kindergarten_path: str) -> DataFrame:
 
 
 def _read_raw_hospital(raw_hospital_data_path: str) -> DataFrame:
-    """Write hospital locations
+    """
+    Reads and processes a raw hospital data CSV file.
 
-    The output looks like:
-           latitude   longitude  estimated_occupancy source_facility_id
-    2    -35.119186  173.260926                 32.0           F04054-H
-    4    -45.858787  170.473064                 90.0           F04067-F
-    5    -40.337130  175.616683                 11.0           F0B082-C
-    6    -40.211906  176.098154                 11.0           F0C087-G
-    7    -36.779884  174.756511                 35.0           F3K618-K
-    ...         ...         ...                  ...                ...
+    Filters for entries where 'use' is 'Hospital'. Extracts coordinates from
+    'WKT' (Well-Known Text) and selects relevant columns.
+
     Args:
-        workdir (str): Working directory
-        hospital_locations_cfg (dict): Hospital location configuration
+        raw_hospital_data_path (str): Path to the raw hospital CSV data.
+                                      Expected to have 'use', 'WKT',
+                                      'estimated_occupancy', and
+                                      'source_facility_id' columns.
+
+    Returns:
+        DataFrame: A DataFrame with columns ['latitude', 'longitude',
+                   'estimated_occupancy', 'source_facility_id'].
     """
     data = read_csv(raw_hospital_data_path)
 
@@ -474,5 +421,15 @@ def _read_raw_hospital(raw_hospital_data_path: str) -> DataFrame:
 
     return data[["latitude", "longitude", "estimated_occupancy", "source_facility_id"]]
 
-def _read_original_csv(osm_data_path: str):
+def _read_original_csv(osm_data_path: str) -> DataFrame:
+    """
+    Reads a CSV file from the given path and removes duplicate rows.
+
+    Args:
+        osm_data_path (str): The file path to the CSV data, typically
+                             OpenStreetMap data.
+
+    Returns:
+        DataFrame: A DataFrame with duplicate rows removed.
+    """
     return read_csv(osm_data_path).drop_duplicates()

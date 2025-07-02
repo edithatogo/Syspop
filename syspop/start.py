@@ -37,14 +37,37 @@ logger = setup_logging(workdir="")
 def diary(
     output_dir: str,
     n_cpu: int = 1,
-    llm_diary_data: dict or None = None,
-    activities_cfg: dict or None = None,
+    llm_diary_data: dict | None = None,
+    activities_cfg: dict | None = None,
 ):
-    """Create diary data from synthetic population
+    """
+    Generates agent diaries and saves them to Parquet files.
+
+    This function orchestrates the diary generation process. It first reads
+    previously generated synthetic population data (base, work, school).
+    Then, it partitions the population data and generates diaries for each
+    partition using the `create_diary` function. After generation, it performs
+    a quality check and maps generic diary locations to specific instance names.
+
+    Two main Parquet files are saved in `output_dir`:
+    - "syspop_diaries_type.parquet": Diaries with generic location types.
+    - "syspop_diaries.parquet": Diaries with specific location names/IDs.
 
     Args:
-        output_dir (str): Output directory
-        ncpu (int): Number of CPU to be used
+        output_dir (str): The directory where synthetic population Parquet files
+                          are located and where the output diary Parquet files
+                          will be saved.
+        n_cpu (int, optional): The number of partitions to split the population
+                               data into for processing. This is primarily for
+                               managing memory and logging progress, not true
+                               parallel processing in this implementation.
+                               Defaults to 1.
+        llm_diary_data (dict | None, optional): Pre-generated LLM diary data to
+            use as a base for diary creation. If None, a rule-based approach
+            (`activities_cfg`) is used. Defaults to None.
+        activities_cfg (dict | None, optional): Configuration for rule-based
+            diary generation if `llm_diary_data` is None. Defaults to None,
+            which implies `DIARY_CFG` will be used by `create_diary`.
     """
 
     start_t = datetime.now()
@@ -96,36 +119,45 @@ def create(
     household: dict = None,
     work: dict = None,
     commute: dict = None,
-    education: dict = None,
-    shared_space: dict = None,
+    education: dict | None = None,
+    shared_space: dict | None = None,
 ):
     """
-    Generates a synthetic population and related data based on provided parameters.
+    Main orchestrator function to generate a synthetic population and associated datasets.
 
-    This function orchestrates the creation of a synthetic population by generating
-    various components, including population structure, households, work-related data,
-    school-related data, and shared space information. The resulting data is saved
-    in the specified output directory.
+    This function takes various input data configurations (population structure,
+    geography, household composition, work details, commute patterns, education
+    facilities, and shared spaces) and processes them to create a detailed
+    synthetic population. Each agent in the population is assigned attributes like
+    age, gender, ethnicity, household, work/school location, travel methods, and
+    specific instances of shared spaces they might visit.
+
+    The generated data is saved into multiple Parquet files in the `output_dir`,
+    categorized by data type (e.g., "syspop_base.parquet", "syspop_household.parquet").
 
     Args:
-        syn_areas: A collection of synthetic areas used for population generation.
-        output_dir (str): The directory where the output data files will be saved.
-        population (dict, optional): A dictionary containing population structure data.
-        geography (dict, optional): A dictionary containing geographical address data.
-        household (dict, optional): A dictionary containing household composition data.
-        work (dict, optional): A dictionary containing work-related data.
-        commute (dict, optional): A dictionary containing commute-related data.
-        education (dict, optional): A dictionary containing education-related data.
-        shared_space (dict, optional): A dictionary containing shared space information.
-
-    Returns:
-        None: The function saves various output files to the specified directory.
+        syn_areas (list | pd.Series): A list or Series of SA2 area IDs for which the
+            synthetic population should be generated.
+        output_dir (str): The directory where all output Parquet files will be saved.
+        population (dict | None, optional): Dictionary containing the 'structure'
+            DataFrame for population.
+        geography (dict | None, optional): Dictionary containing 'address' and 'location'
+            DataFrames.
+        household (dict | None, optional): Dictionary containing the 'composition'
+            DataFrame for households.
+        work (dict | None, optional): Dictionary containing 'employee', 'employer',
+            and 'income' DataFrames.
+        commute (dict | None, optional): Dictionary containing 'travel_to_work' and
+            'travel_to_school' DataFrames.
+        education (dict | None, optional): Dictionary containing 'school' and
+            'kindergarten' DataFrames.
+        shared_space (dict | None, optional): Dictionary where keys are shared space
+            types (e.g., "hospital", "supermarket") and values are DataFrames
+            containing their locations and attributes.
 
     Raises:
-        OSError: If the output directory cannot be created or written to.
-
-    Logs:
-        The function logs the creation process of each data component.
+        OSError: If the `output_dir` cannot be created.
+        KeyError: If expected keys are missing from the input data dictionaries.
     """
     if not exists(output_dir):
         makedirs(output_dir)

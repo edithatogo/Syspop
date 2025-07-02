@@ -10,7 +10,18 @@ def pop_pivot(
     pivot_cfg: dict = {"index": ["sex", "ethnicity"], "columns": ["age"]},
     values_name: str = "count",
 ):
+    """
+    Pivots the population data based on the provided configuration.
 
+    Args:
+        base_pop (DataFrame): The base population DataFrame.
+        pivot_cfg (dict, optional): Configuration for pivoting.
+            Defaults to {"index": ["sex", "ethnicity"], "columns": ["age"]}.
+        values_name (str, optional): Name of the values column. Defaults to "count".
+
+    Returns:
+        DataFrame: The pivoted population DataFrame.
+    """
     base_pop_pivot = base_pop.pivot_table(
         index=pivot_cfg["index"],
         columns=pivot_cfg["columns"],
@@ -36,7 +47,16 @@ def pop_pivot(
 
 
 def ipf_adjustment(base_pop_input: DataFrame, constrains: dict):
+    """
+    Adjusts the population data using the Iterative Proportional Fitting (IPF) algorithm.
 
+    Args:
+        base_pop_input (DataFrame): The input population DataFrame.
+        constrains (dict): Dictionary of constraints for IPF adjustment.
+
+    Returns:
+        DataFrame: The adjusted population DataFrame.
+    """
     base_pop = deepcopy(base_pop_input)
 
     constrain_indices = []
@@ -75,6 +95,19 @@ def postproc(
     colnames: list = ["sex", "ethnicity", "age"],
     apply_scaler: bool = True,
 ):
+    """
+    Post-processes the IPF adjusted population data.
+
+    Args:
+        pop_orig (DataFrame): The original population DataFrame.
+        pop_updated (DataFrame): The IPF adjusted population DataFrame.
+        colnames (list, optional): List of column names to merge on.
+            Defaults to ["sex", "ethnicity", "age"].
+        apply_scaler (bool, optional): Whether to apply scaling. Defaults to True.
+
+    Returns:
+        DataFrame: The post-processed population DataFrame.
+    """
 
     def _objective(df: DataFrame, scaling_factor: float):
         return abs(df["count"].sum() - (df["count_adjusted"] * scaling_factor).sum())

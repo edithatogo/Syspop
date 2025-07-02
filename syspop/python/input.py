@@ -10,14 +10,25 @@ from syspop.python import NZ_DATA_DEFAULT
 def new_zealand(
     data_dir: str = NZ_DATA_DEFAULT, apply_pseudo_ethnicity: bool = False
 ) -> dict:
-    """Get data to create synthentic population
+    """
+    Loads various New Zealand specific datasets required for synthetic population generation.
+
+    This function reads multiple Parquet files from the specified `data_dir`.
+    These files include data on population structure, geography, household
+    composition, commute patterns, work, education, and shared spaces.
+    Optionally, it can add a pseudo 'ethnicity' column to the household
+    composition data for testing purposes.
 
     Args:
-        data_dir (str): where the test data located
-        apply_pseudo_ethnicity (bool): add pseudo ethnicity (for testing purpose)
+        data_dir (str, optional): The directory path where the Parquet input files
+            are located. Defaults to `NZ_DATA_DEFAULT`.
+        apply_pseudo_ethnicity (bool, optional): If True, a pseudo 'ethnicity'
+            column is added to the 'household_composition' DataFrame using
+            `add_pseudo_hhd_ethnicity`. Defaults to False.
 
     Returns:
-        dict: test data to be used
+        dict: A dictionary where keys are dataset names (e.g., "population_structure",
+              "geography_hierarchy") and values are the loaded pandas DataFrames.
     """
     nz_data = {}
 
@@ -64,32 +75,22 @@ def add_pseudo_hhd_ethnicity(
     weights: list = [0.6, 0.15, 0.1, 0.12, 0.03],
 ) -> DataFrame:
     """
-    Add a pseudo-ethnicity column to a household composition
-    dataframe based on weighted probabilities.
+    Adds a pseudo 'ethnicity' column to a household composition DataFrame.
 
-    Parameters
-    ----------
-    household_composition_data : pandas.DataFrame
-        The input dataframe containing household composition data.
-    ethnicities : list, optional
-        List of ethnicity categories to assign. Defaults to
-            ["european", "maori", "asian", "others"].
-    weights : list, optional
-        List of probabilities corresponding to each ethnicity. Must sum to 1.
-        Defaults to [0.7, 0.15, 0.12, 0.03].
+    The ethnicity is assigned randomly based on the provided `ethnicities` list
+    and their corresponding `weights`. This is primarily used for testing or
+    when actual ethnicity data for households is not available.
 
-    Returns
-    -------
-    pandas.DataFrame
-        The input dataframe with an added or updated "ethnicity" column.
+    Args:
+        household_composition_data (DataFrame): The input DataFrame to which
+            the 'ethnicity' column will be added.
+        ethnicities (list, optional): A list of ethnicity strings to choose from.
+            Defaults to ["European", "Maori", "Pacific", "Asian", "MELAA"].
+        weights (list, optional): A list of weights corresponding to `ethnicities`.
+            Must sum to 1.0. Defaults to [0.6, 0.15, 0.1, 0.12, 0.03].
 
-    Examples
-    --------
-    >>> df = pd.DataFrame({'sa2': [100100, 100100], 'age': [0, 1]})
-    >>> add_pseudo_hhd_ethnicity(df)
-       sa2  age ethnicity
-    0  100100    0  european
-    1  100100    1     maori
+    Returns:
+        DataFrame: The input DataFrame with an added 'ethnicity' column.
     """
     household_composition_data["ethnicity"] = choice(
         ethnicities, size=len(household_composition_data), p=weights
@@ -97,14 +98,20 @@ def add_pseudo_hhd_ethnicity(
     return household_composition_data
 
 
-def load_llm_diary(data_dir: str = NZ_DATA_DEFAULT):
-    """Load LLM based diary data
+def load_llm_diary(data_dir: str = NZ_DATA_DEFAULT) -> dict:
+    """
+    Loads pre-generated LLM diary data from a pickle file.
+
+    The pickle file is expected to be named "llm_diary.pickle" and located
+    in the specified `data_dir`.
 
     Args:
-        data_dir (str, optional): _description_. Defaults to NZ_DATA_DEFAULT.
+        data_dir (str, optional): The directory where "llm_diary.pickle" is located.
+            Defaults to `NZ_DATA_DEFAULT`.
 
     Returns:
-        _type_: _description_
+        dict: The loaded LLM diary data. The structure of this dictionary
+              depends on how it was originally created and saved.
     """
     with open(f"{data_dir}/llm_diary.pickle", "rb") as fid:
         llm_diary_data = pickle_load(fid)

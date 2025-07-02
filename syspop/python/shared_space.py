@@ -14,20 +14,23 @@ logger = getLogger()
 
 def create_shared_data(shared_space_data: DataFrame, proc_shared_space_name: str) -> DataFrame:
     """
-    Create a DataFrame of shared space data by transforming the input DataFrame.
+    Transforms raw shared space data into a structured DataFrame with unique IDs.
 
-    This function extracts the 'area', 'latitude', and 'longitude' columns from the 
-    provided DataFrame. It then generates a new DataFrame where each row corresponds 
-    to an entry in the input data, with an added unique identifier for each entry.
+    Takes a DataFrame with 'area', 'latitude', and 'longitude' for shared spaces,
+    and for each row, creates a new record with a unique ID. The unique ID is
+    stored in a column named after `proc_shared_space_name`.
 
-    Parameters:
-        shared_space_data (DataFrame): A pandas DataFrame containing at least the 
-                                        'area', 'latitude', and 'longitude' columns.
+    Args:
+        shared_space_data (DataFrame): Input DataFrame with at least 'area',
+                                       'latitude', and 'longitude' columns.
+        proc_shared_space_name (str): The name to use for the new column that
+                                      will store the unique ID for each shared space
+                                      (e.g., "supermarket_id", "restaurant_id").
 
     Returns:
-        DataFrame: A new DataFrame containing the transformed shared space data, 
-                with 'area' as an integer, a unique 'id' as a string (first 6 
-                characters of a UUID), and 'latitude' and 'longitude' as floats.
+        DataFrame: A new DataFrame where each row represents a shared space.
+                   Columns: 'area' (int), `proc_shared_space_name` (str, unique ID),
+                   'latitude' (float), 'longitude' (float).
     """
     shared_space_data = shared_space_data[["area", "latitude", "longitude"]]
 
@@ -49,29 +52,45 @@ def place_agent_to_shared_space_based_on_area(
         shared_space_type: str,
         filter_keys: list = [],
         name_key: str = "id",
-        weight_key: str or None = None,
-        shared_space_type_convert: dict or None = None) -> Series:
+        weight_key: str | None = None,
+        shared_space_type_convert: dict | None = None) -> Series:
     """
-    Assign an agent to a shared space based on specified area criteria.
+    Assigns an agent to a specific shared space based on their assigned area for that
+    shared space type and other optional filters.
 
-    This function selects a shared space from the provided data based on the agent's 
-    area and other filtering criteria. If multiple shared spaces meet the criteria, 
-    one is randomly selected, optionally weighted by a specified key.
+    If the agent has an assigned area for the given `shared_space_type` (e.g.,
+    `agent['area_supermarket']` is not None), this function filters the
+    `shared_space_data` to that area. It then applies further filtering based
+    on `filter_keys` (matching agent attributes to shared space attributes).
+    A specific shared space is then sampled from the filtered list, optionally
+    using `weight_key` for weighted sampling. The ID of the selected space is
+    assigned to the agent's attribute corresponding to `shared_space_type`
+    (or its converted name via `shared_space_type_convert`).
 
-    Parameters:
-        shared_space_data (DataFrame): A pandas DataFrame containing shared space 
-                                        information, including area and filter criteria.
-        agent (Series): A pandas Series representing an agent with area and filter values.
-        shared_space_type (str): The type of shared space to which the agent is being assigned.
-        filter_keys (list, optional): A list of keys used for additional filtering of 
-                                    shared spaces. Defaults to an empty list.
-        weight_key (str or None, optional): A key used for weighting the selection of 
-                                            shared spaces. If None, selection is uniform. 
-                                            Defaults to None.
+    Args:
+        shared_space_data (DataFrame): DataFrame containing all available shared spaces.
+            Must have a column `area_{shared_space_type}` and a column specified by `name_key`.
+            Can also have columns matching `filter_keys` and `weight_key`.
+        agent (Series): The agent to be assigned. Must have an attribute
+            `area_{shared_space_type}` and attributes for any `filter_keys`.
+        shared_space_type (str): The generic type of shared space (e.g., "supermarket").
+        filter_keys (list, optional): List of attribute names to use for exact
+            matching between agent and shared space data. For range filters,
+            the shared_space_data should have columns like `key_min` and `key_max`.
+            Defaults to [].
+        name_key (str, optional): The column name in `shared_space_data` that holds
+            the unique ID of the shared space. Defaults to "id".
+        weight_key (str | None, optional): If provided, the column name in
+            `shared_space_data` to use for weighted sampling. Defaults to None.
+        shared_space_type_convert (dict | None, optional): A dictionary to map
+            `shared_space_type` to a different attribute name on the agent.
+            E.g., {"work": "employer"}. Defaults to None.
 
     Returns:
-        Series: The updated agent Series with the selected shared space ID assigned to 
-                the corresponding shared_space_type.
+        Series: The updated agent Series with the specific shared space ID assigned.
+                If no suitable space is found, "Unknown" is assigned. If the agent
+                had no area assigned for this space type, the attribute remains unchanged
+                or is set based on previous assignments.
     """
     selected_space_id = None
 
@@ -121,35 +140,32 @@ def find_nearest_shared_space_from_household(
         shared_space_type: str,
         n: int =2) -> DataFrame:
     """
-    Find the nearest shared spaces for households based on geographic coordinates.
+    Finds the N nearest shared spaces for each unique household area and adds them
+    as a comma-separated string to the geography_location DataFrame.
 
-    This function identifies the nearest shared spaces for each household from the specified
-    geography location. It computes distances between the household locations and shared space
-    addresses and updates the household data with the nearest shared spaces.
+    It calculates Euclidean distances between SA2 area centroids (from `geography_location`
+    filtered by unique areas in `household_data`) and all shared space addresses.
+    For each household area, it identifies the `n` nearest shared spaces.
+    If a shared space is beyond a type-specific maximum distance (from
+    `SHARED_SPACE_NEAREST_DISTANCE_KM`), it's excluded.
 
-    Parameters:
-    ----------
-    household_data : DataFrame
-        A DataFrame containing household information, including an 'area' column.
-    
-    shared_space_address : DataFrame
-        A DataFrame containing shared space addresses, with 'latitude', 'longitude', and 'id' columns.
-    
-    geography_location : DataFrame
-        A DataFrame containing geographic data, including 'area', 'latitude', and 'longitude' columns.
-    
-    shared_space_type : str
-        The name of the column to be added to the updated DataFrame, which will contain the nearest 
-        shared space IDs for each household.
-
-    n : int, optional
-        The number of nearest shared spaces to retrieve for each household. Default is 2.
+    Args:
+        household_data (DataFrame): DataFrame with household locations, must have 'area'.
+        shared_space_address (DataFrame): DataFrame of shared spaces with 'latitude',
+            'longitude', and a column named `shared_space_type` containing IDs.
+        geography_location (DataFrame): DataFrame of SA2 area centroids with 'area',
+            'latitude', 'longitude'.
+        shared_space_type (str): The type of shared space (e.g., "supermarket"),
+            used as a key in `SHARED_SPACE_NEAREST_DISTANCE_KM` and as the
+            column name in `shared_space_address` holding the IDs.
+        n (int, optional): The number of nearest shared spaces to find. Defaults to 2.
 
     Returns:
-    -------
-    DataFrame
-        The updated geography_location DataFrame with a new column containing the IDs of the 
-        nearest shared spaces based on the specified shared_space_type.
+        DataFrame: A subset of `geography_location` (for areas present in
+                   `household_data`) with an added column named `shared_space_type`.
+                   This new column contains a comma-separated string of the IDs of
+                   the N nearest shared spaces, or "Unknown" if none are found
+                   within the distance threshold.
     """
     updated_src_data = geography_location[
         geography_location["area"].isin(household_data.area.unique())]
@@ -199,22 +215,29 @@ def find_nearest_shared_space_from_household(
 
 def place_agent_to_shared_space_based_on_distance(
         agent: Series,
-        shared_space_loc: DataFrame) -> Series:
+        shared_space_loc: dict[str, DataFrame]) -> Series:
     """
-    Assigns the location of an agent to a shared space based on the area attribute.
+    Assigns specific shared space locations to an agent based on their home area.
 
-    This function iterates over the shared space locations and updates the agent's
-    position according to the specified area. It finds the corresponding shared space 
-    location for the agent's area and assigns it to the agent.
+    For each `proc_shared_space_name` (e.g., "supermarket", "hospital") in the
+    `shared_space_loc` dictionary, this function looks up the shared space(s)
+    assigned to the agent's home 'area' in the corresponding DataFrame
+    (e.g., `shared_space_loc['supermarket']`). It then assigns this
+    shared space ID (or comma-separated IDs if multiple were found by
+    `find_nearest_shared_space_from_household`) to the agent's attribute
+    of the same name (e.g., `agent['supermarket']`).
 
     Args:
-        agent (Series): A Pandas Series representing the agent, which must contain
-                        an 'area' attribute.
-        shared_space_loc (DataFrame): A Pandas DataFrame containing shared space 
-                                       locations with an 'area' column for filtering.
+        agent (Series): The agent to be updated. Must have an 'area' attribute.
+        shared_space_loc (dict[str, DataFrame]): A dictionary where keys are shared
+            space types (e.g., "supermarket") and values are DataFrames. Each
+            DataFrame must have an 'area' column and a column with the same name
+            as the key (e.g., 'supermarket' column containing specific supermarket IDs
+            assigned to that area). This dict is typically the output of multiple
+            calls to `find_nearest_shared_space_from_household`.
 
     Returns:
-        Series: The updated agent Series with the assigned shared space locations.
+        Series: The updated agent Series with specific shared space IDs assigned.
     """
     for proc_shared_space_name in shared_space_loc:
         proc_shared_space_loc = shared_space_loc[proc_shared_space_name]

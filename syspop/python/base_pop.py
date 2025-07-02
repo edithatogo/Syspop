@@ -7,26 +7,31 @@ logger = getLogger()
 
 def base_pop_wrapper(
     structure_data: DataFrame,
-    output_area_filter: list or None,
+    output_area_filter: list | None,
 ) -> DataFrame:
-    """Create base population
+    """
+    Creates a base population DataFrame by disaggregating summarized structure data.
+
+    The input `structure_data` is expected to have columns like 'area', 'age',
+    'gender', 'ethnicity', and a 'value' column indicating the count of
+    individuals with that combination of characteristics. This function repeats
+    each row `value` times to create a DataFrame where each row represents
+    an individual.
 
     Args:
-        gender_data (DataFrame): Gender data for each age
-        ethnicity_data (DataFrame): Ethnicity data for each age
-        output_area_filter (list or None): With area ID to be used
+        structure_data (DataFrame): A DataFrame containing aggregated population
+                                    counts for different demographic groups and areas.
+                                    Must include a 'value' column for counts and
+                                    an 'area' column.
+        output_area_filter (list | None): An optional list of area IDs. If provided,
+                                          the `structure_data` will be filtered to
+                                          include only these areas before processing.
 
     Returns:
-        DataFrame: Produced base population
-
-    The output is sth like:
-                area  age  gender ethnicity
-        0     236800    0  female  European
-        1     236800    0    male  European
-        2     236800    0    male  European
-        3     236800    0  female  European
-        4     236800    0    male  European
-        ...      ...  ...     ...       ...
+        DataFrame: A disaggregated population DataFrame with columns for each
+                   demographic characteristic (e.g., 'area', 'age', 'gender',
+                   'ethnicity'), where each row represents one individual.
+                   The 'value' column is dropped.
     """
 
     start_time = datetime.utcnow()

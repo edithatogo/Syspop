@@ -24,9 +24,10 @@ def perturbate_routes(
     cur_nodes_to_copy: int = 15,
     pert_start_loc: int = 15,
 ):
-    """Perturbate routes across different hours,
-        e.g., some nodes from 0600 will be added to 05:45,
-        this will make the subsequent visualisation smoother
+    """
+    Perturbates routes across different hours to smooth subsequent visualizations.
+
+    For example, some nodes from 06:00 might be added to 05:45.
 
     Args:
         input_routes (dict): Input data routes, e.g., {agent_id: {"routes": [(lat1, lon1), (lat2, lon2), ...]}}
@@ -76,14 +77,18 @@ def perturbate_routes(
 def interpolate_coordinates(
     latlon: list, frames: int, add_random_timestep: bool = True
 ) -> list:
-    """Interpolate coordinates for lat and lon
+    """
+    Interpolates latitude and longitude coordinates over a specified number of frames.
 
     Args:
-        latlon (list): the list of lat and lon to be interploated
-        frames (int): number of frames
+        latlon (list): A list of (latitude, longitude) tuples to be interpolated.
+        frames (int): The number of frames to interpolate over.
+        add_random_timestep (bool, optional): If True, adds a random number of
+            repeated first and last coordinates to simulate variable start/end times.
+            Defaults to True.
 
     Returns:
-        list: the list of coordinates
+        list: A list of interpolated (latitude, longitude) tuples.
     """
 
     def _add_random_timestep(
@@ -91,9 +96,10 @@ def interpolate_coordinates(
         first_item_repeats: list = [0, 10],
         last_item_repeats: list = [0, 10],
     ) -> list:
-        """Add some randomness in the timestep, otherwise all
-            agents always starts moving at T0,
-            and stop moving at the last timestep
+        """
+        Adds random repetitions of the first and last items in a list.
+
+        This is used to simulate variability in start and stop times of movement.
 
         Args:
             lst_input (list): input latlon
@@ -150,13 +156,18 @@ def interpolate_coordinates(
 
 
 def get_domain_range(df: DataFrame) -> dict:
-    """Obtain domain range
+    """
+    Calculates the geographical domain range (min/max latitude and longitude)
+    from a DataFrame of coordinates.
 
     Args:
-        df (DataFrame): address data frame
+        df (DataFrame): A DataFrame containing coordinates. Expected to have an 'id'
+                        column (which is dropped) and other columns where values are
+                        (latitude, longitude) tuples.
 
     Returns:
-        dict: Domain range, min and max for lat/lon
+        dict: A dictionary with 'south', 'north', 'west', 'east' keys representing
+              the bounding box, with a 0.1 degree buffer.
     """
     df = df.drop(columns=["id"])
 
@@ -189,17 +200,24 @@ def read_data(
     people_ids: int,
     pertubate_latlon: float = 0.0,
 ) -> DataFrame:
-    """Read datasets
+    """
+    Reads and processes synthetic population (synpop), address, and diary data
+    to create a DataFrame of hourly latitude/longitude coordinates for selected agents.
 
     Args:
-        sypop_base_path (str): Basic sypop datasets
-        sypop_address_path (str): Syspop address dataset path
-        syspop_diaries_path (str): Syspop diary dataset path
-        area_ids (list): a list of area ids
-        people_ids (int): a list of people ids
+        sypop_base_path (str): Path to the basic synpop dataset (Parquet format).
+        sypop_address_path (str): Path to the synpop address dataset (Parquet format).
+        syspop_diaries_path (str): Path to the synpop diary dataset (Parquet format).
+        area_ids (list): A list of area IDs to filter the population.
+        people_ids (int): A list of people IDs to filter the population.
+        pertubate_latlon (float, optional): A small float value to randomly perturb
+            latitude and longitude if a location in the diary is None or "nan".
+            Defaults to 0.0.
 
     Returns:
-        DataFrame: The dataframe for the processed data
+        DataFrame: A DataFrame where each row represents an agent and columns
+                   represent hours (0-23), containing (latitude, longitude) tuples.
+                   Also includes an 'id' column for the agent ID.
     """
     synpop_data = pandas_read_parquet(sypop_base_path)
     synpop_address = pandas_read_parquet(sypop_address_path)
@@ -251,15 +269,20 @@ def read_data(
     return DataFrame.from_dict(latlon_data)
 
 
-def create_geo_object(domain: dict, network_type: str = "drive"):
-    """Create geo object for OSMNX
+def create_geo_object(domain: dict, network_type: str = "drive") -> MultiDiGraph:
+    """
+    Creates a NetworkX MultiDiGraph from OSM data for a given geographical domain.
 
     Args:
-        domain (dict): Domain size
-        network_type (str): can be all, or drive
+        domain (dict): A dictionary defining the bounding box with keys
+                       'north', 'south', 'east', 'west'.
+        network_type (str, optional): The type of street network to download
+                                     (e.g., "drive", "walk", "bike", "all").
+                                     Defaults to "drive".
 
     Returns:
-        _type_: Geo object for OSMNX
+        networkx.MultiDiGraph: A graph object from OSMnx, with edge speeds
+                               and travel times imputed.
     """
     G = ox.graph_from_bbox(
         domain["north"],
@@ -283,15 +306,23 @@ def create_routes(
     pert_flag: bool,
     frames=60,
 ) -> dict:
-    """Creating routes with OSMNX
+    """
+    Creates routes between hourly locations for agents using an OSMnx graph.
 
     Args:
-        G (MultiDiGraph): OSMNX object
-        hourly_data (DataFrame): Hourly diary data
-        frames (int, optional): default number of fames. Defaults to 60.
+        G (MultiDiGraph): An OSMnx graph object with edge travel times.
+        hourly_data (DataFrame): A DataFrame where each row is an agent and
+                                 columns are hours (0-23) containing
+                                 (latitude, longitude) tuples of their location.
+                                 Must also include an 'id' column for agent ID.
+        interp_flag (bool): If True, interpolates the routes to have 'frames' number of points.
+        pert_flag (bool): If True, perturbates the routes to smooth transitions.
+        frames (int, optional): Number of frames for interpolation. Defaults to 60.
 
     Returns:
-        dict: Route data
+        dict: A dictionary where keys are agent IDs. Each value is another
+              dictionary where keys are hours (0-23). These nested dictionaries
+              contain 'routes' (a list of (lat, lon) tuples) and 'length' (route length).
     """
 
     all_hours = list(hourly_data.columns)
@@ -380,16 +411,23 @@ def main(
     interp: bool,
     pert: bool,
 ):
-    """Main function for creating routes
+    """
+    Main function to generate and save agent routes based on synthetic population data.
+
+    Reads synpop data, diaries, and address information for specified agents and areas.
+    Creates a geographical graph using OSMnx, then generates routes for each agent
+    between their hourly locations. Routes can be interpolated and perturbed.
+    The resulting routes are saved to a pickle file in the specified workdir.
 
     Args:
-        workdir (str): Working directory
-        area_ids (list): A list of areas to be used (SA2)
-        people_ids (list): A list of people to be used (people ID from syspop)
-        sypop_base_path (str): Base syspop data path
-        sypop_address_path (str): Syspop address data path
-        syspop_diaries_path (str): Syspop diary data path
-        interp (bool): run interpolation flag
+        workdir (str): Directory to save the output routes pickle file.
+        area_ids (list): List of SA2 area IDs to process.
+        people_ids (list): List of people IDs (from synpop) to process.
+        sypop_base_path (str): Path to the base synpop data (Parquet).
+        sypop_address_path (str): Path to the synpop address data (Parquet).
+        syspop_diaries_path (str): Path to the synpop diaries data (Parquet).
+        interp (bool): If True, interpolate routes.
+        pert (bool): If True, perturbate routes for smoother visualization.
     """
 
     try:

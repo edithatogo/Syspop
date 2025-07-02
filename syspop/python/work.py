@@ -7,34 +7,36 @@ from pandas import DataFrame, Series
 logger = getLogger()
 
 def create_income(income_dataset: DataFrame) -> DataFrame:
-    """Get income data
+    """
+    Simply returns the input income dataset.
+
+    This function acts as a placeholder or a simple pass-through for the income data.
+    It might be used for consistency in a workflow where other data types
+    undergo more complex creation processes.
 
     Args:
-        income_dataset (DataFrame): income dataset
+        income_dataset (DataFrame): The input DataFrame containing income data.
 
     Returns:
-        DataFrame: _description_
+        DataFrame: The same input `income_dataset`.
     """
     return income_dataset
 
 
 def create_employee(employee_data: DataFrame, all_areas: list) -> DataFrame:
     """
-    Filters employee data for specified areas and returns relevant columns.
+    Filters employee data for specified work areas and selects relevant columns.
 
     Args:
-        employee_data (DataFrame): DataFrame containing employee information.
-        all_areas (list): List of areas to filter the employee data by.
+        employee_data (DataFrame): Input DataFrame containing employee counts or
+                                   percentages. Expected columns: 'area',
+                                   'business_code', 'employee'.
+        all_areas (list): A list of area IDs (work areas) to filter by.
 
     Returns:
-        DataFrame: A DataFrame containing filtered employee data with the following columns:
-            - area_work (str): Area name (renamed from 'area').
-            - business_code (str): Business code identifier.
-            - percentage (float): Employee probability or percentage.
-
-    Notes:
-        - The input data is filtered to include only rows where the area is in `all_areas`.
-        - The 'area' column is renamed to 'area_work' in the returned DataFrame.
+        DataFrame: A filtered DataFrame with columns ['area_work', 'business_code',
+                   'employee']. The 'area' column from the input is renamed
+                   to 'area_work'.
     """
     employee_data = employee_data[employee_data["area"].isin(all_areas)]
     employee_data = employee_data.rename(columns={"area": "area_work"})
@@ -43,22 +45,27 @@ def create_employee(employee_data: DataFrame, all_areas: list) -> DataFrame:
 
 def create_employer(employer_dataset: DataFrame, address_data: DataFrame, all_areas: list) -> DataFrame:
     """
-    Expands employer data into individual records and filters by specified areas.
+    Disaggregates employer counts into individual employer records, assigning each
+    a unique ID and a specific address within its SA2 area.
+
+    The input `employer_dataset` contains counts of employers per 'area' and
+    'business_code'. This function expands these counts, so if an area has
+    N employers of a certain type, N individual employer records are created.
+    Each created employer is assigned a random address (latitude, longitude)
+    from `address_data` that falls within its 'area'.
 
     Args:
-        employer_dataset (DataFrame): DataFrame containing employer 
-            information with 'area', 'business_code', and 'employer' columns.
-        address_data (DataFrame): Address datasets
-        all_areas (list): List of areas to include in the expanded DataFrame.
+        employer_dataset (DataFrame): Aggregated employer data. Expected columns:
+            'area', 'business_code', 'employer' (count of employers).
+        address_data (DataFrame): DataFrame of available addresses with 'area',
+                                  'latitude', 'longitude' columns.
+        all_areas (list): A list of area IDs to process. `employer_dataset`
+                          will be filtered by these areas.
 
     Returns:
-        DataFrame: Expanded employer data with individual 
-            records for each employer, filtered by specified areas.
-
-    Notes:
-        - Each row in the original DataFrame is expanded into multiple rows based on the 'employer' count.
-        - A unique 6-digit ID is generated for each individual record.
-        - The resulting DataFrame contains 'area', 'business_code', and 'id' columns.
+        DataFrame: A DataFrame where each row is an individual employer.
+                   Columns: 'area_work' (renamed from 'area'), 'business_code',
+                   'latitude', 'longitude', 'employer' (unique ID).
     """
     employer_dataset = employer_dataset[employer_dataset["area"].isin(all_areas)]
 
@@ -87,23 +94,24 @@ def create_employer(employer_dataset: DataFrame, address_data: DataFrame, all_ar
 
 def place_agent_to_employee(employee_data: DataFrame, agent: Series) -> Series:
     """
-    Assigns an business_code to an agent based on age, location, and employment rate.
+    Assigns a business code to an agent based on their work area and the
+    distribution of employees across business codes in that area.
+
+    If the agent has no assigned 'area_work', their 'business_code' is set to None.
+    Otherwise, it filters `employee_data` for the agent's 'area_work'.
+    If there are no employees in that area, 'business_code' is "Unknown".
+    Otherwise, a business code is sampled based on the proportion of employees
+    in each business code within that work area.
 
     Args:
-        employee_data (DataFrame): DataFrame containing employee information with 'area' and 'employee' columns.
-        agent (Series): Series containing agent information with 'age' and 'area' values.
+        employee_data (DataFrame): DataFrame of employee counts. Expected columns:
+            'area_work', 'business_code', 'employee' (count or proportion).
+        agent (Series): The agent to assign a business code to. Must have
+                        an 'area_work' attribute.
 
     Returns:
-        Series: The updated agent Series with an added 'employee_status' value.
-
-    Notes:
-        - Agents under 18 are automatically assigned None (not employed).
-        - Agents 18 and older are assigned an employee status based on thrre 
-            employment rate and a randomly selected business code from the egfmployee_data DataFrame.
-        - The 'employee_status' value is either a business code (str) or None.
-
-    Raises:
-        ValueError: If employment_rate is not between 0 and 1.
+        Series: The updated agent Series with a 'business_code' attribute assigned
+                (str or None or "Unknown").
     """
     if agent.area_work is None:
         selected_code = None
@@ -126,25 +134,28 @@ def place_agent_to_employee(employee_data: DataFrame, agent: Series) -> Series:
 
 def place_agent_to_income(income_data: DataFrame, agent: Series) -> Series:
     """
-    Assigns an income value to an agent based on specific criteria from a DataFrame of income data.
+    Assigns an income value (as a string) to an agent based on their
+    demographic and work characteristics.
 
-    This function filters the income_data DataFrame based on the agent's characteristics (gender, business code,
-    ethnicity, and age) and assigns the corresponding income value to the agent. If no matching income record is found,
-    the income is set to "Unknown".
+    If the agent has no 'area_work', income is set to None.
+    Otherwise, it filters `income_data` based on the agent's 'gender',
+    'business_code' (can be a comma-separated list in `income_data`),
+    'ethnicity', and 'age' (age bands in `income_data`).
+    If a unique match is found, that income 'value' is assigned. If no match
+    or multiple matches occur, 'income' is set to "Unknown".
 
-    Parameters:
-    ----------
-    income_data : DataFrame
-        A DataFrame containing income data with columns for gender, business_code, age, ethnicity, and value.
-    
-    agent : Series
-        A Series representing an agent with attributes including area_work, gender, business_code, ethnicity, and age.
+    Args:
+        income_data (DataFrame): DataFrame containing income data. Expected columns:
+            'gender', 'business_code' (can be "code1, code2"), 'ethnicity',
+            'age' (formatted as "age1-age2"), and 'value' (the income amount).
+        agent (Series): The agent to assign income to. Expected attributes:
+            'area_work', 'gender', 'business_code', 'ethnicity', 'age'.
 
     Returns:
-    -------
-    Series
-        The modified agent Series, now including an 'income' attribute with the assigned income value 
-        or "Unknown" if no match is found.
+        Series: The updated agent Series with an 'income' attribute (str or None).
+
+    Raises:
+        Exception: If more than one income record matches the agent's criteria.
     """
     if agent.area_work is None:
         selected_income = None

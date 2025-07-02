@@ -89,7 +89,27 @@ nominatim = Nominatim()
 
 def add_random_location(
     df: DataFrame, total_lines: int, data_type: str, buffer: float = 0.3
-):
+) -> DataFrame:
+    """
+    Generates a DataFrame with randomly perturbed locations based on an input DataFrame.
+
+    For a specified number of lines (`total_lines`), it samples a row from the
+    input `df`, takes its latitude and longitude, and adds a random uniform buffer
+    (between -`buffer` and +`buffer` degrees) to both.
+
+    Args:
+        df (DataFrame): Input DataFrame with 'lat' and 'lon' columns to sample from.
+        total_lines (int): The number of random locations to generate.
+        data_type (str): A string prefix for the 'name' of the generated locations
+                         (e.g., "supermarket_pseudo_0").
+        buffer (float, optional): The maximum absolute value for the random
+                                  perturbation added to latitude and longitude.
+                                  Defaults to 0.3.
+
+    Returns:
+        DataFrame: A new DataFrame with columns ['name', 'lat', 'lon']
+                   containing the generated random locations.
+    """
     output = {"name": [], "lat": [], "lon": []}
 
     for i in range(total_lines):
@@ -109,15 +129,34 @@ def query_results(
     if_add_random_loc: bool = False,
     use_element: bool = False,
 ):
-    """Query data from OSM
+    """
+    Queries OpenStreetMap (OSM) using Overpass API for specified feature types
+    within a given region and country, then saves the results as CSV files.
+
+    For each key-value pair in `query_keys` (e.g., "amenity": "restaurant"):
+    1. Constructs an Overpass query for nodes and ways.
+    2. Executes the query.
+    3. Extracts latitude, longitude, and name for each resulting element.
+    4. Saves the data to a CSV file named "{key}_{value}.csv" in `output_dir`.
+    5. Optionally, adds more randomly perturbed locations based on the queried data.
+    6. Saves a JSON mapping of recorded pseudo-names to actual OSM names.
 
     Args:
-        query_keys (dict): Query keys such as {"amenity": ["restaurant"]}, where
-           amenity is the key, and restaurant is the value, the details can be found
-           https://wiki.openstreetmap.org/wiki/Map_features
-        region (str): region name such as Auckland
-        country (str): country name such as New Zealand
-        output_dir (str): Output directory
+        query_keys (dict): A dictionary where keys are OSM feature keys (e.g., "amenity",
+                           "shop") and values are lists of feature values (e.g.,
+                           ["restaurant", "cafe"], ["supermarket"]).
+        region (str): The region to query within (e.g., "Wellington"). Can be numpy.nan
+                      if querying the whole country.
+        country (str): The country to query (e.g., "New Zealand").
+        output_dir (str, optional): Directory to save the output CSV and JSON files.
+                                    Defaults to RAW_DATA_DIR.
+        if_add_random_loc (bool, optional): If True, adds additional randomly
+            perturbed locations for certain data types (defined in
+            ADD_RANDOM_PLACES_SCALER). Defaults to False.
+        use_element (bool, optional): If True, processes all elements from the
+            Overpass result (nodes, ways, relations). If False, only processes nodes.
+            Defaults to False. (Note: Current implementation for ways might be incomplete
+            if relying only on `node.lat()`, `node.lon()` for way geometries).
     """
 
     if not exists(output_dir):

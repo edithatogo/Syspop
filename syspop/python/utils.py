@@ -14,11 +14,24 @@ def setup_logging(
     workdir: str = "/tmp",
     log_type: str = "syspop",
     start_utc: datetime = datetime.utcnow(),
-):
-    """set up logging system for tasks
+) -> getLogger:
+    """
+    Sets up a basic logging configuration for the application.
+
+    Configures a logger that outputs to both the console (StreamHandler) and
+    optionally to a log file. The log file is named based on `log_type` and
+    the `start_utc` date.
+
+    Args:
+        workdir (str, optional): The directory where the log file will be created.
+            Defaults to "/tmp".
+        log_type (str, optional): A prefix for the log file name.
+            Defaults to "syspop".
+        start_utc (datetime, optional): The UTC datetime used to timestamp the
+            log file name. Defaults to `datetime.utcnow()`.
 
     Returns:
-        object: a logging object
+        logging.Logger: The configured root logger instance.
     """
     formatter = Formatter(
         "%(asctime)s - %(name)s.%(lineno)d - %(levelname)s - %(message)s"
@@ -36,22 +49,45 @@ def setup_logging(
     return logger
 
 
-def round_a_datetime(dt):
+def round_a_datetime(dt: datetime) -> datetime:
+    """
+    Rounds a datetime object to the nearest hour.
+
+    If the minute component is 30 or more, it rounds up to the next hour.
+    Otherwise, it truncates to the current hour. Seconds and microseconds
+    are always set to zero.
+
+    Args:
+        dt (datetime): The datetime object to round.
+
+    Returns:
+        datetime: The datetime object rounded to the nearest hour.
+    """
     # If minutes are 30 or more, round up to the next hour
     if dt.minute >= 30:
         dt += timedelta(hours=1)
     return dt.replace(minute=0, second=0, microsecond=0)
 
 
-def merge_syspop_data(data_dir: str, data_types: list) -> DataFrame:
-    """Merge different sypop data together
+def merge_syspop_data(data_dir: str, data_types: list[str]) -> DataFrame:
+    """
+    Merges multiple Syspop Parquet datasets based on a common 'id' column.
+
+    For each data type specified in `data_types`, this function looks for a
+    Parquet file named "syspop_{data_type}.parquet" in the `data_dir`.
+    It reads all found Parquet files into DataFrames and then performs an
+    inner merge on the 'id' column.
 
     Args:
-        data_dir (str): Data directory
-        data_types (list): data types to be merged, e.g., [base, travel etc.]
+        data_dir (str): The directory where the Syspop Parquet files are located.
+        data_types (list[str]): A list of strings representing the types of data
+            to merge (e.g., ["base", "travel", "work"]). This corresponds to
+            the suffix in the Parquet file names.
 
     Returns:
-        DataFrame: merged datasets
+        DataFrame: A single DataFrame containing all merged data. If no files
+                   are found or only one is found, the behavior might differ
+                   (functools.reduce might raise an error or return the single DataFrame).
     """
 
     proc_data_list = []
@@ -74,34 +110,37 @@ def select_place_with_contstrain(
     constrain_options: list,
     constrain_priority_weight: float = 0.85,
     check_constrain_priority: bool = False,
-):
+) -> DataFrame:
     """
-    Select a row from a DataFrame based on weighted sampling of a specified column,
-    with priority given to a specific value.
+    Selects a single row (place) from a DataFrame based on weighted sampling,
+    giving priority to a specific `constrain_priority` value within a
+    `constrain_name` column.
+
+    If `constrain_priority` is not among `constrain_options` and
+    `check_constrain_priority` is False, it falls back to uniform random sampling.
 
     Args:
-        places (DataFrame): pandas DataFrame containing the data to sample from
-        constrain_name (str): Name of the column to base the sampling weights on
-        constrain_priority (str): Value in the constrain_name column to prioritize
-        constrain_options (list): List of all possible values in the constrain_name column
-        constrain_priority_weight (float, optional): Weight assigned to the priority value,
-            between 0 and 1. Defaults to 0.85
-        check_constrain_priority (bool, optional): If True, raises an exception if
-            constrain_priority isn't in constrain_options. Defaults to False
+        places (DataFrame): The DataFrame from which to sample a place.
+        constrain_name (str): The name of the column in `places` that contains the
+                              categories to be weighted (e.g., 'ethnicity').
+        constrain_priority (str): The specific value within `constrain_name` column
+                                  that should receive higher weight.
+        constrain_options (list): A list of all possible unique values in the
+                                  `constrain_name` column of the `places` DataFrame.
+        constrain_priority_weight (float, optional): The weight (probability)
+            assigned to `constrain_priority`. Must be between 0 and 1.
+            Defaults to 0.85.
+        check_constrain_priority (bool, optional): If True, an exception will be
+            raised if `constrain_priority` is not found in `constrain_options`.
+            If False and not found, uniform sampling is used. Defaults to False.
 
     Returns:
-        DataFrame: A single-row DataFrame sampled based on the weighted probabilities
+        DataFrame: A single-row DataFrame representing the selected place.
 
     Raises:
-        Exception: If constrain_name is not a column in places
-        Exception: If check_constrain_priority is True and constrain_priority is not
-            in constrain_options
-
-    Notes:
-        - The remaining weight (1 - constrain_priority_weight) is distributed equally
-          among the other values in constrain_options
-        - If constrain_priority isn't in constrain_options and check_constrain_priority
-          is False, returns a random sample without weights
+        Exception: If `constrain_name` is not a column in the `places` DataFrame.
+        Exception: If `check_constrain_priority` is True and `constrain_priority`
+                   is not in `constrain_options`.
     """
     if constrain_name not in places:
         raise Exception(

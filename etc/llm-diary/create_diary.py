@@ -26,17 +26,31 @@ def diary_wrapper(
     overwrite_data: bool = False,
     overwrite_vis: bool = False,
 ) -> str:
-    """Create diary wrapper
+    """
+    Generates synthetic diary data for a specific people type, day type, and
+    number of scenarios using a Large Language Model (LLM).
+
+    The process involves:
+    1. Prompting an LLM to generate diary entries.
+    2. Converting the LLM output to a structured DataFrame.
+    3. Post-processing the data (updating locations based on weights and names).
+    4. Saving the generated diary data to a pickle file.
+    5. Optionally, creating a visualization of the diary percentages.
 
     Args:
-        day_type (str): weekday or weekend
-        scenarios (int): how many scenarios you want to create
-        people (str): the people type, e.g., student etc.
-        model_path (str): LLAMA model path
-        logger (LoggerorNone, optional): logger fid. Defaults to None.
+        day_type (str): The type of day ("weekday" or "weekend").
+        scenarios (int): The number of diary scenarios to generate.
+        people (str): The type of people (e.g., "student", "worker1", as defined
+                      in PEOPLE_CFG).
+        model_path (str): Path to the LlamaCPP model file.
+        workdir (str): Directory to save the output pickle file and visualizations.
+        overwrite_data (bool, optional): If True, overwrite existing data pickle
+                                         file. Defaults to False.
+        overwrite_vis (bool, optional): If True, overwrite existing visualization
+                                        file. Defaults to False.
 
     Returns:
-        str: output data path
+        str: The path to the saved diary data pickle file.
     """
     start_time = datetime.utcnow()
 

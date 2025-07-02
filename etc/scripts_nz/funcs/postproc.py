@@ -13,10 +13,34 @@ def postproc(
     domains_cfg: dict or None = None,
     pop=None,
 ):
-    """Postprocessing the dataset, e.g., match the number of SA2 etc.
+    """
+    Post-processes a list of DataFrames, standardizing them based on common
+    geographical areas and an optional scaling factor.
+
+    The function performs several steps:
+    1. Scales the 'age_data' DataFrame by the given `scale` factor.
+    2. Filters 'age_data' to remove areas with no people or no people over 18.
+    3. Identifies common geographical areas (super_area, area) present across
+       all relevant DataFrames in `data_list`.
+    4. Optionally filters these common areas based on `domains_cfg` (region,
+       super_area, area).
+    5. Filters each DataFrame in `data_list` to include only the determined
+       common geographical areas.
+    6. Writes the processed DataFrames to CSV files in the `workdir`.
 
     Args:
-        data_list (list): data to be checked
+        workdir (str): The directory to save the processed CSV files.
+        data_list (dict[str, DataFrame]): A dictionary where keys are data names
+            (e.g., "age_data", "geography_hierarchy_data") and values are the
+            corresponding DataFrames. These DataFrames are expected to have area
+            columns that match keys in `AREAS_CONSISTENCY_CHECK`.
+        scale (float, optional): A factor to scale population counts in 'age_data'.
+            Defaults to 1.0.
+        domains_cfg (dict | None, optional): A dictionary to filter areas by
+            specific regions, super_areas, or areas. Keys can be "region",
+            "super_area", "area", with values being lists of names/IDs to keep.
+            Defaults to None (no domain filtering).
+        pop (Any, optional): Unused parameter. Defaults to None.
     """
 
     def _find_common_values(sublists):

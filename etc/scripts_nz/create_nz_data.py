@@ -22,19 +22,20 @@ from funcs.wrapper import (
 )
 
 
-def import_raw_data(workdir: str, input_cfg: str):
-    """Imports and processes raw data for various demographic and geographic categories.
+def import_raw_data(workdir: str, input_cfg_path: str):
+    """
+    Imports and processes raw data for various demographic and geographic categories
+    to generate foundational datasets for the synthetic population.
 
-    This function checks if the specified working directory
-    exists and creates it if it does not.
-    It then calls a series of wrapper functions to
-    create and process data for different categories such as population,
-    household, geography, commute, work, school, kindergarten,
-    hospital, and shared spaces.
-    Finally, it creates additional attributes.
+    This function orchestrates the creation of several datasets by calling specific
+    wrapper functions for each data type (population, household, geography, etc.).
+    The processed data is saved as Parquet files in the specified `workdir`.
 
     Args:
-        workdir (str): The working directory where the data will be stored and processed.
+        workdir (str): The directory where the processed data files (Parquet)
+                       will be saved.
+        input_cfg_path (str): Path to the YAML configuration file that specifies
+                              paths to raw input data files and other parameters.
     """
     if not exists(workdir):
         makedirs(workdir)
@@ -106,22 +107,25 @@ def import_raw_data(workdir: str, input_cfg: str):
 
 def produce_proj_data(
     workdir: str,
-    input_cfg: dict,
-    all_years: None or list = [2023, 2028, 2033, 2038, 2043],
+    input_cfg_path: str,
+    all_years: list | None = [2023, 2028, 2033, 2038, 2043],
 ):
     """
-    Produces projected data by copying files and processing population and work data
-    for specified target years.
+    Generates projected synthetic population data for specified future years.
+
+    This function takes existing base synthetic population data and projects
+    population structure and work-related data for a list of target years.
+    It also performs validation and copies other relevant static files to
+    the projection directories.
 
     Args:
-        workdir (str): The working directory containing the data files.
-        all_years (None or list, optional): A list of target years for projection.
-            Defaults to [2023, 2028, 2033, 2038, 2043].
-
-    Returns:
-        None
+        workdir (str): The base directory where initial data resides and
+                       where projected year subdirectories will be created.
+        input_cfg_path (str): Path to the YAML configuration file.
+        all_years (list | None, optional): A list of integer years for which
+            to generate projections. Defaults to [2023, 2028, 2033, 2038, 2043].
     """
-    input_cfg = read_cfg(input_cfg)
+    input_cfg = read_cfg(input_cfg_path)
     print("Start projection ...")
     project_pop_data(workdir, input_cfg, all_years=all_years)
     project_work_data(workdir, input_cfg, all_years=all_years)

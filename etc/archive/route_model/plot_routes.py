@@ -9,7 +9,17 @@ import matplotlib.pyplot as plt
 from PIL import Image
 
 
-def get_minmax_latlon(coordinates: list):
+def get_minmax_latlon(coordinates: list) -> tuple[float, float, float, float]:
+    """
+    Calculates the minimum and maximum latitude and longitude from a list of coordinates.
+
+    Args:
+        coordinates (list): A list of (latitude, longitude) tuples.
+
+    Returns:
+        tuple[float, float, float, float]: A tuple containing
+            (min_latitude, max_latitude, min_longitude, max_longitude).
+    """
     # Get the min and max of lat and lon
     min_lat = min(coordinates, key=lambda x: x[0])[0]
     max_lat = max(coordinates, key=lambda x: x[0])[0]
@@ -18,7 +28,15 @@ def get_minmax_latlon(coordinates: list):
     return min_lat, max_lat, min_lon, max_lon
 
 
-def convert_png_to_gif(png_files, gif_path, duration):
+def convert_png_to_gif(png_files: list[str], gif_path: str, duration: int):
+    """
+    Converts a list of PNG image files into a GIF.
+
+    Args:
+        png_files (list[str]): A list of filepaths to PNG images.
+        gif_path (str): The filepath to save the output GIF.
+        duration (int): The duration (in milliseconds) for each frame in the GIF.
+    """
     # Read all png images into a list
     images = [Image.open(png_file) for png_file in png_files]
 
@@ -28,7 +46,15 @@ def convert_png_to_gif(png_files, gif_path, duration):
     )
 
 
-def plot_data(all_data_points, ax):
+def plot_data(all_data_points: list[tuple[float, float]], ax):
+    """
+    Plots a collection of data points (latitude, longitude) on a given Matplotlib Axes object.
+
+    Args:
+        all_data_points (list[tuple[float, float]]): A list of (latitude, longitude) tuples.
+        ax (matplotlib.axes.Axes): The Matplotlib Axes object to plot on.
+            It is assumed to have a Cartopy projection.
+    """
 
     latitudes, longitudes = zip(*all_data_points)
 

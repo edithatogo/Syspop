@@ -7,12 +7,26 @@ from funcs.preproc import _read_original_csv, _read_raw_hospital, _read_raw_kind
 from funcs.utils import haversine_distance
 
 
-def create_osm_space(data_path: str, geography_location: DataFrame):
-    """Write shared space from OSM
+def create_osm_space(data_path: str, geography_location: DataFrame) -> DataFrame:
+    """
+    Processes OpenStreetMap (OSM) data for shared spaces, assigning an SA2 area
+    to each space based on proximity to SA2 centroids.
+
+    Reads OSM data from a CSV (expected to have 'lat', 'lon' columns),
+    calculates the Haversine distance to SA2 area centroids, and assigns
+    the area of the nearest centroid.
 
     Args:
-        workdir (str): Working directory
-        space_name (str), name such as supermakrts
+        data_path (str): Path to the CSV file containing OSM shared space data
+                         (e.g., supermarkets, restaurants).
+        geography_location (DataFrame): DataFrame with SA2 area centroids,
+                                        containing 'area', 'latitude', 'longitude'.
+
+    Returns:
+        DataFrame: The input OSM data DataFrame with an added 'area' column
+                   and renamed 'lat'/'lon' to 'latitude'/'longitude'.
+                   Rows with no assigned area (due to no nearby centroid)
+                   are dropped.
     """
     data = _read_original_csv(data_path)
     distances = cdist(
@@ -33,16 +47,16 @@ def create_osm_space(data_path: str, geography_location: DataFrame):
 
 def create_kindergarten(kindergarten_data_path: str) -> DataFrame:
     """
-    Reads and processes raw New Zealand kindergarten data from a CSV file.
-
-    This function reads a CSV file containing kindergarten data and processes it using the
-    `_read_raw_nz_kindergarten` function.
+    Reads and processes raw New Zealand kindergarten data by calling
+    `_read_raw_kindergarten`.
 
     Args:
-        kindergarten_data_path (str): The file path to the CSV file containing the raw kindergarten data.
+        kindergarten_data_path (str): The file path to the CSV file
+                                      containing the raw kindergarten data.
 
     Returns:
-        DataFrame: A pandas DataFrame containing the processed kindergarten data.
+        DataFrame: A pandas DataFrame containing the processed kindergarten data,
+                   as returned by `_read_raw_kindergarten`.
     """
     return _read_raw_kindergarten(kindergarten_data_path)
 
@@ -51,26 +65,26 @@ def create_school(
     school_data_path: str,
     sa2_loc: DataFrame,
     max_to_cur_occupancy_ratio=1.2,
-) -> dict:
-    """Write schools information
+) -> DataFrame:
+    """
+    Processes raw school data, assigns SA2 areas based on proximity,
+    and calculates maximum student capacity.
+
+    Calls `_read_raw_schools` to get initial school data. Then, for each school,
+    it finds the nearest SA2 area centroid from `sa2_loc` and assigns that
+    SA2 area to the school. Maximum student capacity is estimated by multiplying
+    'estimated_occupancy' by `max_to_cur_occupancy_ratio`.
 
     Args:
-        workdir (str): Working directory
-        school_cfg (dict): School configuration
-        max_to_cur_occupancy_ratio (float, optional): In the data, we have the estimated occupancy
-            for a school, while in JUNE we need the max possible occupancy. Defaults to 1.2.
-
-    The output is sth like:
-                    area  max_students             sector   latitude   longitude  age_min  age_max
-        0     133400             0          secondary -36.851138  174.760643       14       19
-        1     167100          1087  primary_secondary -36.841742  175.696738        5       19
-        3     358500            28            primary -46.207408  168.541883        5       13
-        8     101100           296  primary_secondary -34.994245  173.463766        5       19
-        9     106600          1728          secondary -35.713358  174.318881       14       19
-        .....
+        school_data_path (str): Path to the raw school CSV data.
+        sa2_loc (DataFrame): DataFrame with SA2 area centroids, containing
+                             'area', 'latitude', 'longitude'.
+        max_to_cur_occupancy_ratio (float, optional): Factor to multiply
+            estimated occupancy by to get maximum capacity. Defaults to 1.2.
 
     Returns:
-        dict: The dict contains the school information
+        DataFrame: A DataFrame with columns ['area', 'max_students', 'sector',
+                   'latitude', 'longitude', 'age_min', 'age_max'].
     """
     data = _read_raw_schools(school_data_path)
 
@@ -115,20 +129,22 @@ def create_hospital(
     hospital_data_path: str,
     sa2_loc: DataFrame,
 ) -> DataFrame:
-    """Write hospital locations
+    """
+    Processes raw hospital data, assigns SA2 areas based on proximity,
+    and renames 'estimated_occupancy' to 'beds'.
 
-    The output looks like:
-            area   latitude   longitude  beds
-    2     100800 -35.119186  173.260926    32
-    4     350400 -45.858787  170.473064    90
-    5     229800 -40.337130  175.616683    11
-    6     233300 -40.211906  176.098154    11
-    7     125500 -36.779884  174.756511    35
-    ...      ...        ...         ...   ...
+    Calls `_read_raw_hospital` to get initial hospital data. Then, for each
+    hospital, it finds the nearest SA2 area centroid from `sa2_loc` and
+    assigns that SA2 area to the hospital.
 
     Args:
-        workdir (str): Working directory
-        hospital_locations_cfg (dict): Hospital location configuration
+        hospital_data_path (str): Path to the raw hospital CSV data.
+        sa2_loc (DataFrame): DataFrame with SA2 area centroids, containing
+                             'area', 'latitude', 'longitude'.
+
+    Returns:
+        DataFrame: A DataFrame with columns ['area', 'latitude', 'longitude', 'beds'].
+                   Rows with missing data after processing are dropped.
     """
     data = _read_raw_hospital(hospital_data_path)
 

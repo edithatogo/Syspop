@@ -22,27 +22,17 @@ logger = getLogger()
 
 def create_household_wrapper(workdir: str, input_cfg: dict):
     """
-    Creates a household dataset based on the provided household composition and saves it to a file.
+    Wrapper function to create and save household composition data.
 
-    Parameters:
-        workdir (str): The working directory where the output file will be saved.
-        input_cfg (dict): The configuration dictionary containing household parameters.
+    Calls `create_household_and_dwelling_number` to generate household data
+    based on the 'household_composition' path in `input_cfg`.
+    Saves the resulting DataFrame as "household_composition.parquet" in `workdir`.
 
-    The function performs the following steps:
-    1. Generates household and dwelling number data based on the household composition specified in the configuration.
-    2. Saves the generated household data to a pickle file in the specified working directory.
-
-    The generated household data looks like:
-                area  adults  children value
-        0      100100       0         1    3
-        1      100100       0         2    4
-        2      100100       1         0  142
-        3      100100       1         1   14
-        4      100100       1         2   15
-        ...       ...     ...       ...  ...
-
-    Returns:
-        None
+    Args:
+        workdir (str): Directory to save the output Parquet file.
+        input_cfg (dict): Configuration dictionary containing the path to
+                          the raw household composition data under
+                          `input_cfg['household']['household_composition']`.
     """
 
     hhd_data = create_household_and_dwelling_number(
@@ -56,13 +46,21 @@ def create_household_wrapper(workdir: str, input_cfg: dict):
 def create_shared_space_wrapper(
     workdir: str, input_cfg: dict, space_names: list = ["supermarket", "restaurant", "pharmacy"]
 ):
-    """Create shared space such as supermarket or restaurant
-         Compared to school/hospital, shared space is ther locations where
-         people may randomly interact.
-         Also, people may also just visit shared space nearby
+    """
+    Wrapper function to create and save data for various types of shared spaces.
+
+    For each `space_name` in `space_names`:
+    1. Reads the geography location data ("geography_location.parquet").
+    2. Calls `create_osm_space` to process the OSM data for that shared space type,
+       using the path specified in `input_cfg['venue'][space_name]`.
+    3. Saves the resulting DataFrame as "shared_space_{space_name}.parquet" in `workdir`.
 
     Args:
-        workdir (str): Working directory
+        workdir (str): Directory to save the output Parquet files.
+        input_cfg (dict): Configuration dictionary containing paths to OSM data
+                          for each shared space type under `input_cfg['venue']`.
+        space_names (list, optional): A list of shared space types to process.
+            Defaults to ["supermarket", "restaurant", "pharmacy"].
     """
     geography_location = read_parquet(join(workdir, "geography_location.parquet"))
 
@@ -73,10 +71,18 @@ def create_shared_space_wrapper(
 
 
 def create_others_wrapper(workdir: str, input_cfg: dict):
-    """Createing others
+    """
+    Wrapper function to create and save miscellaneous datasets like MMR vaccine
+    and birthplace data.
+
+    Calls `add_mmr` and `add_birthplace` using paths from `input_cfg['others']`.
+    Saves the resulting DataFrames as "mmr_vaccine.parquet" and
+    "birthplace.parquet" in `workdir`.
 
     Args:
-        workdir (str): Working directory
+        workdir (str): Directory to save the output Parquet files.
+        input_cfg (dict): Configuration dictionary containing paths to raw data
+                          for MMR vaccine and birthplace under `input_cfg['others']`.
     """
     mmr_data = add_mmr(input_cfg["others"]["mmr_vaccine"])
     birthplace_data = add_birthplace(input_cfg["others"]["birthplace"])
@@ -85,19 +91,18 @@ def create_others_wrapper(workdir: str, input_cfg: dict):
 
 
 def create_hospital_wrapper(workdir: str, input_cfg: dict):
-    """Create hospital wrapper (e.g., where is the hospital etc.)
+    """
+    Wrapper function to create and save hospital location data.
 
-    The output looks like:
-            area   latitude   longitude  beds
-    2     100800 -35.119186  173.260926    32
-    4     350400 -45.858787  170.473064    90
-    5     229800 -40.337130  175.616683    11
-    6     233300 -40.211906  176.098154    11
-    7     125500 -36.779884  174.756511    35
-    ...      ...        ...         ...   ...
+    1. Reads geography location data ("geography_location.parquet").
+    2. Calls `create_hospital` to process raw hospital data (path from
+       `input_cfg['venue']['hospital']`) and assign SA2 areas.
+    3. Saves the resulting DataFrame as "hospital.parquet" in `workdir`.
 
     Args:
-        workdir (str): Working directory
+        workdir (str): Directory to save the output Parquet file.
+        input_cfg (dict): Configuration dictionary containing the path to
+                          raw hospital data under `input_cfg['venue']['hospital']`.
     """
     geography_location = read_parquet(join(workdir, "geography_location.parquet"))
     hopital_data = create_hospital(input_cfg["venue"]["hospital"], geography_location)
@@ -105,37 +110,35 @@ def create_hospital_wrapper(workdir: str, input_cfg: dict):
 
 
 def create_kindergarten_wrapper(workdir: str, input_cfg: dict):
-    """Create kindergarten wrapper (e.g., where is the kindergarten etc.)
+    """
+    Wrapper function to create and save kindergarten location data.
 
-    The output looks like:
-            area  max_students   latitude   longitude        sector  age_min  age_max
-    0     100800            30 -35.118228  173.258565  kindergarten        0        5
-    1     101100            30 -34.994478  173.464730  kindergarten        0        5
-    2     100700            30 -35.116080  173.270685  kindergarten        0        5
-    3     103500            30 -35.405553  173.796409  kindergarten        0        5
-    4     103900            30 -35.278121  174.081808  kindergarten        0        5
-    .....
+    Calls `create_kindergarten` to process raw kindergarten data (path from
+    `input_cfg['venue']['kindergarten']`).
+    Saves the resulting DataFrame as "kindergarten.parquet" in `workdir`.
+
     Args:
-        workdir (str): Working directory
+        workdir (str): Directory to save the output Parquet file.
+        input_cfg (dict): Configuration dictionary containing the path to
+                          raw kindergarten data under `input_cfg['venue']['kindergarten']`.
     """
     kindergarten_data = create_kindergarten(input_cfg["venue"]["kindergarten"])
     kindergarten_data.to_parquet(join(workdir, "kindergarten.parquet"))
 
 
 def create_school_wrapper(workdir: str, input_cfg: dict):
-    """Create school wrapper (e.g., where is the school etc.)
+    """
+    Wrapper function to create and save school location and attribute data.
 
-    The output is sth like:
-                area  max_students             sector   latitude   longitude  age_min  age_max
-        0     133400             0          secondary -36.851138  174.760643       14       19
-        1     167100          1087  primary_secondary -36.841742  175.696738        5       19
-        3     358500            28            primary -46.207408  168.541883        5       13
-        8     101100           296  primary_secondary -34.994245  173.463766        5       19
-        9     106600          1728          secondary -35.713358  174.318881       14       19
-        .....
+    1. Reads geography location data ("geography_location.parquet").
+    2. Calls `create_school` to process raw school data (path from
+       `input_cfg['venue']['school']`) and assign SA2 areas.
+    3. Saves the resulting DataFrame as "school.parquet" in `workdir`.
 
     Args:
-        workdir (str): Working directory
+        workdir (str): Directory to save the output Parquet file.
+        input_cfg (dict): Configuration dictionary containing the path to
+                          raw school data under `input_cfg['venue']['school']`.
     """
 
     geography_location = read_parquet(join(workdir, "geography_location.parquet"))
@@ -146,36 +149,22 @@ def create_school_wrapper(workdir: str, input_cfg: dict):
 
 
 def create_work_wrapper(workdir: str, input_cfg: dict):
-    """Create work wrapper (e.g., employees etc.)
+    """
+    Wrapper function to create and save work-related datasets: employee counts,
+    employer counts, and income data.
 
-    The output (employer/employee)looks like:
-                  area business_code         employer         employee
-        0       100100             A               93              190                    
-        1       100200             A              138              190                   
-        2       100300             A                6               25
-        3       100400             A               57               50
-        4       100500             A               57               95
-        ......
-    For each area it is sth like:
-                  area business_code         employer         employee
-        0       100100             A               93              190                    
-        20082   100100             C                0                6                    
-        56927   100100             E               12                6                   
-        ....
-        132366  100100             I                6                9                    
-        159241  100100             K                6                0        
-
-    In addition, the income data looks like:
-               business_code     sex     age  ethnicity  value
-        137488             A    Male   15-19      Asian    166
-        137498             A    Male   60-64   European   1215
-        137508             A  Female  65-999      Maori   1247
-        137513             A    Male  65-999      Maori    945
-        137523             A    Male   20-24      Maori   1036
-        ...              ...  ...     ...        ...    ...            
+    1. Calls `_read_raw_employer_employee_data` using the path from
+       `input_cfg["work"]["employer_employee_num"]`.
+    2. Calls `_read_raw_income_data` using the path from `input_cfg["work"]["income"]`.
+    3. Processes the employer/employee data to create separate DataFrames for
+       employee counts and employer counts.
+    4. Saves "work_employee.parquet", "work_employer.parquet", and
+       "work_income.parquet" in `workdir`.
 
     Args:
-        workdir (str): Working directory
+        workdir (str): Directory to save the output Parquet files.
+        input_cfg (dict): Configuration dictionary containing paths to raw data for
+                          employer/employee numbers and income.
     """
     data = _read_raw_employer_employee_data(input_cfg["work"]["employer_employee_num"])
 
@@ -200,33 +189,17 @@ def create_work_wrapper(workdir: str, input_cfg: dict):
 
 def create_travel_wrapper(workdir: str, input_cfg: dict):
     """
-    Reads raw travel-to-work/school data from the input configuration, processes it, 
-    and saves it as a pickle file in the specified working directory.
+    Wrapper function to create and save travel-to-work and travel-to-school datasets.
+
+    Calls `_read_raw_travel_to_work` for both "work" and "school" data types,
+    using paths from `input_cfg["commute"]`.
+    Saves the resulting DataFrames as "commute_travel_to_work.parquet" and
+    "commute_travel_to_school.parquet" in `workdir`.
 
     Args:
-        workdir (str): The directory where the output pickle file will be saved.
-        input_cfg (dict): Configuration dictionary containing the path to the 
-                          raw travel-to-work data under the key "commute".
-
-    The output looks like:
-       area_home  area_work  Work_at_home  Drive_a_private_car_truck_or_van  Drive_a_company_car_truck_or_van  ... 
-         100100     100100           144                               117                                33  ...  
-         100200     100200           210                                93                                24  ...
-         100400     100400           102                                54                                 6  ...
-         100500     100500           123                                30                                 9  ...
-         100600     100600            63                                18                                 0  ...
-        ......
-    
-    Each row is sth like:
-        area_home                                                 100100.000000
-        area_work                                                 100100.000000
-        Work_at_home                                                 144.000000
-        ....
-        Ferry                                                          0.000000
-        Other                                                          6.000000
-    
-    Returns:
-        None
+        workdir (str): Directory to save the output Parquet files.
+        input_cfg (dict): Configuration dictionary containing paths to raw
+                          travel data under `input_cfg["commute"]`.
     """
 
     trave_to_work_data = _read_raw_travel_to_work(
@@ -241,23 +214,16 @@ def create_travel_wrapper(workdir: str, input_cfg: dict):
 
 def create_population_wrapper(workdir: str, input_cfg: dict):
     """
-    Creates a population dataset based on age, ethnicity, and gender distributions, and saves it to a file.
+    Wrapper function to create and save population structure data.
 
-    Parameters:
-        workdir (str): The working directory where the output file will be saved.
-        input_cfg (str): The configuration file containing population parameters.
+    Calls `read_population_structure` to process raw population data (path
+    from `input_cfg["population"]["population_structure"]`).
+    Saves the resulting DataFrame as "population_structure.parquet" in `workdir`.
 
-    Output is sth like below:
-
-
-    Or if it is for the version 2.0, the population structure data looks like:
-                  area  ethnicity  age  gender  value
-        0       100100          1    0       1    6.0
-        1       100100          1    1       1    9.0
-        2       100100          1    2       1    9.0
-        3       100100          1    2       2    9.0
-        4       100100          1    3       1    9.0
-        ...        ...        ...  ...     ...    ...
+    Args:
+        workdir (str): Directory to save the output Parquet file.
+        input_cfg (dict): Configuration dictionary containing the path to raw
+                          population structure data.
     """
     population_structure = read_population_structure(
         input_cfg["population"]["population_structure"])
@@ -267,52 +233,22 @@ def create_population_wrapper(workdir: str, input_cfg: dict):
 
 def create_geography_wrapper(workdir: str, input_cfg: dict, include_address: bool = True):
     """
-    Creates a geography data wrapper and saves it as a pickle file.
+    Wrapper function to create and save geography-related datasets: hierarchy,
+    area locations, and (optionally) address points.
 
-    Parameters:
-        workdir (str): The directory where the pickle file will be saved.
-        input_cfg (dict): A dictionary containing configuration paths for the geography data.
+    - Calls `_read_raw_geography_hierarchy` for hierarchy data.
+    - Calls `_read_raw_geography_location_area` for SA2 area centroid locations.
+    - If `include_address` is True, calls `_read_raw_address` for address points.
+    Saves the resulting DataFrames as "geography_hierarchy.parquet",
+    "geography_location.parquet", and (if applicable) "geography_address.parquet"
+    in `workdir`.
 
-    The function performs the following steps:
-        1. Reads the raw geography hierarchy data from the specified path in input_cfg.
-        2. Reads the raw geography location area data from the specified path in input_cfg.
-        3. Reads the raw address data from the specified paths in input_cfg.
-        4. Combines the read data into a dictionary.
-        5. Saves the combined data as a pickle file in the specified workdir.
-
-    The resulting pickle file contains:
-        - 'hierarchy': Processed geography hierarchy data.
-        - 'location': Processed geography location area data.
-        - 'address': Processed address data.
-    
-    The output looks like:
-
-    - hierarchy:
-                    region  super_area    area
-        0        Northland       50010  100100
-        3        Northland       50010  100200
-        6        Northland       50010  100600
-        8        Northland       50030  100400
-        10       Northland       50030  101000
-        ...            ...         ...     ...
-    
-    - location:
-                area   latitude   longitude
-        0     100100 -34.505453  172.775550
-        1     100200 -34.916277  173.137443
-        2     100300 -35.218501  174.158249
-        3     100400 -34.995278  173.378738
-        4     100500 -35.123147  173.218604
-        ...      ...        ...         ...
-    
-    - address:
-                   area   latitude   longitude
-        0        136000 -36.865148  174.755962
-        1        136000 -36.865394  174.756203
-        2        354700 -45.896419  170.506439
-        3        331400 -43.569101  172.682428
-        4        331400 -43.568808  172.682646
-        ...         ...        ...         ...
+    Args:
+        workdir (str): Directory to save the output Parquet files.
+        input_cfg (dict): Configuration dictionary containing paths to raw
+                          geography data.
+        include_address (bool, optional): Whether to process and include
+                                          address-level data. Defaults to True.
     """
     output= {
         "hierarchy": _read_raw_geography_hierarchy(

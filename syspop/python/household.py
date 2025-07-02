@@ -12,22 +12,31 @@ def create_households(
     household_data: DataFrame,
     address_data: DataFrame,
     areas: list,
-):
+) -> DataFrame:
     """
-    Create a DataFrame of individual households from aggregated data.
+    Disaggregates household composition data to create individual household records,
+    each assigned a unique ID and specific geographic coordinates.
 
-    Parameters:
-        household_data (pd.DataFrame): A DataFrame containing aggregated household data
-                                    with columns ['area', 'adults', 'children', 'value'].
-                                    'value' indicates the number of households for the
-                                    given combination of adults and children.
-        address_data (pd.DataFrame): address data in latitude and longitude
-        areas (list): the areas to be included
+    The input `household_data` provides counts of households with specific
+    numbers of adults and children within an area. This function expands these
+    counts into individual household entries. For each created household, it
+    samples a random address (latitude, longitude) from `address_data`
+    (filtered for the household's area).
+
+    Args:
+        household_data (DataFrame): Aggregated household data. Expected columns:
+            'area', 'adults', 'children', 'value' (count of such households).
+            Can optionally include an 'ethnicity' column.
+        address_data (DataFrame): A DataFrame of available addresses with 'area',
+                                  'latitude', and 'longitude' columns.
+        areas (list): A list of area IDs to process. Both `household_data` and
+                      `address_data` will be filtered by these areas.
 
     Returns:
-    pd.DataFrame: A DataFrame with individual household records, containing the columns:
-                  ['area', 'adults', 'children', 'name'], where 'name' is a unique ID
-                  generated for each household.
+        DataFrame: A DataFrame where each row represents an individual household.
+                   Columns include 'area', 'adults', 'children', 'latitude',
+                   'longitude', 'household' (a unique ID), and 'ethnicity'
+                   (if present in input).
     """
     households = []
 
@@ -70,20 +79,30 @@ def create_households(
 
 def place_agent_to_household(households: DataFrame, agent: Series) -> tuple:
     """
-    Assigns an agent to a household based on the agent's age.
+    Assigns an agent to a suitable household, updating the household's capacity.
+
+    The function determines if the agent is an adult (>=18) or child.
+    It then tries to find a household in the agent's 'area' that has space
+    for that type of agent.
+    If 'ethnicity' is a column in `households`, it attempts to place the
+    agent in a household matching their ethnicity with higher probability.
+    If no suitable household is found in the agent's area, a random household
+    is chosen from the entire `households` DataFrame.
+
+    Once a household is selected, its capacity for the agent type is decremented.
+    The agent is updated with the 'household' ID.
 
     Args:
-        households (DataFrame): A DataFrame containing household information.
-        agent (Series): A Series containing agent information, including 'age'.
+        households (DataFrame): DataFrame of available households. Expected columns:
+            'area', 'adults' (capacity), 'children' (capacity), 'household' (ID).
+            Can optionally include 'ethnicity'.
+        agent (Series): The agent to be placed. Expected attributes: 'age', 'area',
+                        and 'ethnicity' (if ethnicity matching is used).
 
     Returns:
-        tuple: A tuple containing the agent (with household name)
-            and the updated households DataFrame.
-
-    Notes:
-        - Adults (age >= 18) are assigned to households with available adult spaces.
-        - Children (age < 18) are assigned to households with available child spaces.
-        - If no suitable households are available, the agent is assigned to a random household.
+        tuple:
+            - agent (Series): The updated agent Series with 'household' attribute set.
+            - households (DataFrame): The updated households DataFrame with decremented capacity.
     """
     agent_type = "adults" if agent.age >= 18 else "children"
 

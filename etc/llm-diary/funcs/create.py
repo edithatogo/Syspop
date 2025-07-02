@@ -28,24 +28,32 @@ def prompt_llm(
     gender: str = numpy_choice(["male", "female"]),
     print_log: bool = False,
 ) -> dict:
-    """Prompt LLM
+    """
+    Prompts a Large Language Model (LLM) to generate a 24-hour diary schedule.
 
     Args:
-        agent_features (_type_, optional): agent features to be used.
-            Defaults to { "age": "18-65", "gender": "male", "work_status": "employed", "income": "middle income", "time": "weekend", "others": "", }.
-        model_path (str, optional): LLAMA model path. Defaults to DEFAULT_MODEL_NAME.
-        max_tokens (int, optional): token number. Defaults to 450.
-        temperature (float, optional): If the temperature is set to a high value (e.g., 1.0),
-            the model might generate a more diverse and unexpected output. Defaults to 0.7.
-        top_p (float, optional): If top_p is set to a high value (e.g., 0.9), the model considers a wider
-            range of tokens for the next word, leading to more diverse outputs. Defaults to 1.0.
-        top_k (int, optional): If top_k is set to a high value (e.g., 50),
-            the model considers the top 50 most likely next words. Defaults to 120.
-        n_gpu_layers (int, optional): Using GPU for some tasks. Defaults to 256.
-        gender (_type_, optional): choosing gender. Defaults to numpy_choice(["male", "female"]).
+        agent_features (dict, optional): A dictionary describing the agent's
+            characteristics (age, gender, work_status, income, time_period, others, locations).
+            Defaults to a predefined worker profile.
+        model_path (str, optional): Path to the LlamaCPP model file.
+            Defaults to DEFAULT_MODEL_NAME.
+        max_tokens (int, optional): Maximum number of tokens for the LLM to generate.
+            Defaults to 1500.
+        temperature (float, optional): Controls randomness in LLM generation. Higher values
+            mean more randomness. Defaults to 0.7.
+        top_p (float, optional): Nucleus sampling parameter. Defaults to 0.7.
+        top_k (int, optional): Top-k sampling parameter. Defaults to 75.
+        n_gpu_layers (int, optional): Number of GPU layers to use for LLM inference.
+            Defaults to 256.
+        gender (str, optional): Gender of the agent. Defaults to a random choice
+            between "male" and "female".
+        print_log (bool, optional): If True, prints the LLM's raw output.
+            Defaults to False.
 
     Returns:
-        _type_: _description_
+        dict: A dictionary representing the generated diary, with keys as table
+              headers (e.g., "Hour", "Activity", "Location") and values as lists
+              of corresponding entries.
     """
 
     if agent_features["time"] == "weekend":
@@ -102,7 +110,22 @@ def prompt_llm(
     return data
 
 
-def dict2df(data: dict):
+def dict2df(data: dict) -> DataFrame:
+    """
+    Converts a dictionary representation of a diary into a pandas DataFrame,
+    ensuring all hours are present and forward-filling missing entries.
+
+    Args:
+        data (dict): A dictionary where keys are "Hour", "Activity", "Location"
+                     and values are lists of corresponding entries. The "Hour"
+                     is expected in "HH:MM" format.
+
+    Returns:
+        DataFrame: A DataFrame with a "Time" index (datetime.time objects) and
+                   columns "Hour" (integer), "Activity", and "Location".
+                   Missing hourly entries are forward-filled. The first hour's
+                   location and activity are set to "Home" and "Sleep".
+    """
 
     # Create DataFrame
     df = DataFrame(data)
@@ -126,7 +149,20 @@ def dict2df(data: dict):
     return data_postp(df)
 
 
-def extract_keyword(value):
+def extract_keyword(value: str) -> str:
+    """
+    Extracts a recognized location keyword from a string value.
+
+    It splits the input string into words, checks if any word matches a key in
+    LOCATIONS_CFG. If multiple keywords are found, one is chosen randomly.
+    If no keyword is found, "others" is returned.
+
+    Args:
+        value (str): The input string, potentially containing location names.
+
+    Returns:
+        str: A recognized location keyword or "others".
+    """
     # Split the value into words and filter out the keywords
     words = value.replace(",", "").split()
 
@@ -139,14 +175,23 @@ def extract_keyword(value):
     return numpy_choice(keywords_in_value) if keywords_in_value else None
 
 
-def data_postp(data: DataFrame):
-    """Postprocessing the output
+def data_postp(data: DataFrame) -> DataFrame:
+    """
+    Post-processes the diary DataFrame.
+
+    This involves:
+    1. Converting the "Location" column to lowercase.
+    2. Extracting recognized location keywords from the "Location" column using `extract_keyword`.
+    3. Resetting the index and renaming "index" to "Time".
+    4. Extracting the hour from the "Time" column into a new "Hour" column.
 
     Args:
-        data (DataFrame): _description_
+        data (DataFrame): The input diary DataFrame, typically output from `dict2df`.
+                          Expected to have a "Location" column and a "Time" index.
 
     Returns:
-        _type_: _description_
+        DataFrame: The post-processed DataFrame with columns "Time", "Hour",
+                   "Activity", and "Location".
     """
     data["Location"] = data["Location"].str.lower()
     data["Location"] = data["Location"].apply(extract_keyword)
@@ -159,14 +204,19 @@ def data_postp(data: DataFrame):
     return data[["Time", "Hour", "Activity", "Location"]]
 
 
-def combine_data(data_list: list) -> DataFrame:
-    """Combine all data together
+def combine_data(data_list: list[DataFrame]) -> DataFrame:
+    """
+    Combines a list of individual diary DataFrames into a single DataFrame,
+    adding a "People_id" column to distinguish between individuals.
 
     Args:
-        data_list (list): _description_
+        data_list (list[DataFrame]): A list of DataFrames, where each DataFrame
+                                     represents a single person's diary and is
+                                     expected to have a "Time" index.
 
     Returns:
-        DataFrame: _description_
+        DataFrame: A combined DataFrame with columns "Time", "Hour", "Activity",
+                   "Location", and "People_id".
     """
     all_data = []
     for people_id in range(len(data_list)):
@@ -184,12 +234,23 @@ def combine_data(data_list: list) -> DataFrame:
 def update_locations_with_weights(
     data: DataFrame, day_type: str, base_value: str = "home"
 ) -> DataFrame:
-    """Update location occurence based on weight
+    """
+    Adjusts the occurrence of locations in a diary DataFrame based on predefined
+    weights in LOCATIONS_CFG.
+
+    For each location type (e.g., "gym", "supermarket") that has a weight defined
+    for the given `day_type` in `LOCATIONS_CFG`, this function reduces the
+    number of its occurrences. A certain percentage of its occurrences (determined
+    by 1.0 - weight) are randomly replaced with `base_value` (typically "home").
 
     Args:
-        data (DataFrame): Data to be updated
-        day_type (str): weekday or weekend
-        base_value (str, optional): The base value to use [Defaults to "home"].
+        data (DataFrame): The input diary DataFrame, expected to have a "Location" column.
+        day_type (str): The type of day ("weekday" or "weekend") to determine weights.
+        base_value (str, optional): The location to replace other locations with.
+                                    Defaults to "home".
+
+    Returns:
+        DataFrame: The diary DataFrame with adjusted location occurrences.
     """
     for proc_loc in LOCATIONS_CFG:
         proc_weight = LOCATIONS_CFG[proc_loc]["weight"]
@@ -215,13 +276,19 @@ def update_locations_with_weights(
 
 
 def update_location_name(data: DataFrame) -> DataFrame:
-    """Update data locations
+    """
+    Updates location names in the diary DataFrame based on a conversion map
+    defined in LOCATIONS_CFG.
+
+    For locations that have a "convert_map" in LOCATIONS_CFG (e.g., "office"
+    might convert to "company"), this function replaces the original location
+    name with a name chosen probabilistically from the conversion map.
 
     Args:
-        data (DataFrame): Data to be updated
+        data (DataFrame): The input diary DataFrame with a "Location" column.
 
     Returns:
-        DataFrame: Data has been updated
+        DataFrame: The diary DataFrame with updated location names.
     """
 
     def _replace_with_prob(row, convert_map: dict, target_value: str):

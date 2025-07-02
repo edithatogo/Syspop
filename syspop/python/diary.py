@@ -1,9 +1,12 @@
 from collections import Counter as collections_counter
+from collections import Counter as collections_counter
 from copy import deepcopy
 from datetime import datetime, timedelta
 from logging import getLogger
 from os.path import join
+from typing import Optional
 
+import numpy
 from numpy import array as numpy_array
 from numpy.random import choice as numpy_choice
 from numpy.random import normal as numpy_normal
@@ -39,19 +42,33 @@ def _get_updated_weight(target_value: int, target_weight: dict):
 
 def create_diary_single_person(
     ref_time: datetime = datetime(1970, 1, 1, 0),
-    time_var: numpy_array or None = numpy_normal(0.0, 1.5, 100),
+    time_var: Optional[numpy.ndarray] = numpy_normal(0.0, 1.5, 100),
     activities: dict = DIARY_CFG["default"],
 ) -> dict:
-    """Create diary for one single person
+    """
+    Generates a 24-hour diary for a single person based on activity probabilities
+    and time constraints defined in the `activities` configuration.
+
+    The diary is generated hour by hour. For each hour, it identifies available
+    activities based on their 'time_ranges'. An activity is then chosen
+    probabilistically based on its 'weight' and 'time_weight' for the current hour.
+    If the sum of probabilities for available activities is less than 1.0,
+    activities from 'random_seeds' are considered to fill the remaining probability.
 
     Args:
-        ref_time (datetime, optional): Reference time. Defaults to datetime(1970, 1, 1, 0).
-        time_var (numpy_array, optional): randomrized hours range for selecting an activity.
-            Defaults to numpy_normal(0.0, 2.0, 100).
-        activities (dict, optional): Activity to be chosen from. Defaults to DIARY_CFG["default"].
+        ref_time (datetime, optional): The reference start datetime for the diary.
+            Only the hour component is used for time calculations.
+            Defaults to datetime(1970, 1, 1, 0).
+        time_var (numpy_array | None, optional): An array of values used to
+            randomize the start/end times of activity time ranges. If None,
+            no randomization is applied. Defaults to a normal distribution.
+        activities (dict, optional): A dictionary defining activities, their weights,
+            time ranges, time-specific weights, and max occurrences. Expected
+            structure is similar to `DIARY_CFG["default"]`.
 
     Returns:
-        dict: _description_
+        dict: A dictionary where keys are integer hours (0-23) and values are
+              the names of the selected activities for that hour.
     """
     ref_time_start = ref_time
     ref_time_end = ref_time + timedelta(hours=24)
@@ -131,16 +148,22 @@ def create_diary_single_person(
 
 
 def update_weight_by_age(activities_input: dict, age: int) -> dict:
-    """Update the activity weight
+    """
+    Adjusts the 'weight' of activities in a configuration dictionary based on
+    the provided age and age-specific weight multipliers.
+
+    For each activity in `activities_input` (except "random_seeds"), this function
+    multiplies its base 'weight' by an age-specific factor obtained from
+    `_get_updated_weight` using the activity's 'age_weight' map.
 
     Args:
-        activities_input (dict): activity configuration, e.g.,
-            {'weight': 0.0001, 'time_ranges': [(...)],
-            'age_weight': {'0-5': 0.1, '60-70': 0.1, '70-80': 0.01, '80-999': 1e-05}}
-        age (int): such as 13
+        activities_input (dict): The input activity configuration dictionary.
+            Each activity is expected to have a 'weight' and an 'age_weight'
+            map (e.g., {'0-5': 0.5, '6-17': 1.0}).
+        age (int): The age of the person for whom weights are being updated.
 
     Returns:
-        dict: Updated activity
+        dict: A deep copy of `activities_input` with adjusted 'weight' values.
     """
     activities_output = deepcopy(activities_input)
 
@@ -158,16 +181,36 @@ def create_diary(
     ncpu: int,
     print_log: bool,
     activities_cfg: dict or None = None,
-    llm_diary_data: dict or None = None,
+    llm_diary_data: dict | None = None,
     use_llm_percentage_flag: bool = False,
 ) -> DataFrame:
-    """Create diaries
+    """
+    Generates diaries for a synthetic population.
+
+    For each person in `syspop_data`, this function generates a 24-hour diary.
+    Diaries can be generated either using a rule-based approach (via
+    `create_diary_single_person` with `activities_cfg`) or from pre-generated
+    LLM diary data (via `create_diary_single_person_llm` if `llm_diary_data`
+    is provided).
 
     Args:
-        workdir (str): Working directory
-        syspop_data (DataFrame): Synthetic population
-        ncpu (int): Number of CPUs in total
-            (this is just for displaying the progress)
+        syspop_data (DataFrame): DataFrame of the synthetic population. Expected
+            columns include 'id', 'age', 'employer' (or 'company'), and 'school'.
+        ncpu (int): Number of CPUs (used for logging progress, not for parallelism here).
+        print_log (bool): If True, logs progress messages.
+        activities_cfg (dict | None, optional): Configuration for rule-based diary
+            generation (see `create_diary_single_person`). Defaults to DIARY_CFG.
+        llm_diary_data (dict | None, optional): Pre-generated LLM diary data. If provided,
+            this method is used for diary generation instead of the rule-based approach.
+            Defaults to None.
+        use_llm_percentage_flag (bool, optional): If True and `llm_diary_data` is used,
+            samples locations based on percentages. Otherwise, samples a full diary.
+            Defaults to False.
+
+    Returns:
+        DataFrame: A DataFrame containing diaries for all individuals. Columns include
+                   'id' and integer hours (0-23) as columns, with activity names
+                   as values.
     """
 
     if activities_cfg is None:
@@ -221,19 +264,34 @@ def create_diary_single_person_llm(
     llm_diary_data: dict,
     people_age: int,
     people_company: str,
-    people_school: str,
+    people_school: str | None,
     use_percentage_flag: bool,
 ) -> dict:
-    """Create diary from LLM_diary
+    """
+    Generates a single person's 24-hour diary using pre-generated LLM diary data.
+
+    Selects an appropriate diary template from `llm_diary_data` based on the
+    person's age and work/school status.
+    If `use_percentage_flag` is True, it samples locations for each hour based
+    on the percentage distribution in the LLM data. Otherwise, it samples a
+    complete diary from one of the LLM-generated examples for that person type.
+    Finally, it maps LLM-specific location names to standard Syspop location
+    names using `MAPING_DIARY_CFG_LLM_DIARY`.
 
     Args:
-        llm_diary_data (dict): LLM diary data
-        people_age (int): agent's age
-        people_company (str): agent' company (can be None)
-        people_school (str): agent's school (can be None)
+        llm_diary_data (dict): A dictionary containing pre-generated LLM diaries.
+            Expected to have keys like "percentage" (for probabilistic sampling)
+            and "data" (for sampling full diaries), each containing sub-dictionaries
+            for different person types (e.g., "toddler", "worker", "student").
+        people_age (int): The age of the person.
+        people_company (str | None): The company of the person, if employed.
+        people_school (str | None): The school of the person, if a student.
+        use_percentage_flag (bool): If True, sample locations hour by hour based
+            on percentages. If False, sample a full existing diary.
 
     Returns:
-        dict: People's diary
+        dict: A dictionary where keys are integer hours (0-23) and values are
+              the names of the selected (and mapped) locations for that hour.
     """
 
     if use_percentage_flag:
@@ -306,12 +364,25 @@ def quality_check_diary(
     diary_data: DataFrame,
     diary_to_check: list = ["school"],
 ) -> DataFrame:
-    """For example, in diary may go to school at T03,
-    while for this person the school property may be just NA (e.g., no school can be
-    found nearby in earlier steps). In this case, we put the diary location back to default
+    """
+    Performs a quality check on generated diaries. If an agent's diary indicates
+    they are at a location type (e.g., "school") but the agent does not have
+    that specific location assigned in `synpop_data` (e.g., no specific school ID),
+    that diary entry is changed to "household".
 
     Args:
-        output_dir (str): Output directory
+        synpop_data (DataFrame): The main synthetic population DataFrame, indexed by agent ID.
+                                 It should contain columns corresponding to location types
+                                 listed in `diary_to_check` (e.g., a 'school' column
+                                 with specific school IDs or None).
+        diary_data (DataFrame): The diary DataFrame, where columns are agent IDs and
+                                rows are hours, with location type names as values.
+        diary_to_check (list, optional): A list of location types (column names in
+                                         `synpop_data`) to validate against.
+                                         Defaults to ["school"].
+
+    Returns:
+        DataFrame: The `diary_data` DataFrame with corrected diary entries.
     """
 
     def _check_diary(proc_people_diary: DataFrame, default_place: str = "household"):
@@ -335,15 +406,28 @@ def quality_check_diary(
 
 
 def map_loc_to_diary(output_dir: str):
-    """Create a completed dataset, where replace the place type like supermarket to
-        a actual supermarket name for all agents
+    """
+    Maps generic location types in diaries to specific location instances (names/IDs)
+    assigned to each agent and saves the final diary.
+
+    This function reads the merged synthetic population data (which includes
+    assigned specific locations like a particular school ID or supermarket name for
+    each agent) and the diary data (which contains generic location types like
+    "school" or "supermarket"). It then replaces the generic types in each agent's
+    diary with their assigned specific location instance for each hour.
+
+    The final diary, with specific locations, is saved as "syspop_diaries.parquet".
 
     Args:
-        output_dir (str): _description_
-        print_log (bool, optional): _description_. Defaults to False.
+        output_dir (str): The directory containing the synthetic population Parquet
+                          files (e.g., "syspop_base.parquet", "syspop_school.parquet")
+                          and "syspop_diaries_type.parquet". The output
+                          "syspop_diaries.parquet" will also be saved here.
 
     Raises:
-        Exception: _description_
+        Exception: If a diary location type for an agent cannot be found as an
+                   attribute in the agent's synthetic population data (and is not
+                   in `known_missing_locs`).
     """
 
     # syn_pop_path = join(output_dir, "syspop_base.parquet")

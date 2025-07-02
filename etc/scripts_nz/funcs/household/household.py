@@ -3,11 +3,23 @@
 from funcs.preproc import _read_raw_household
 
 
-def create_household_and_dwelling_number(raw_household_path):
-    """Create household number
+def create_household_and_dwelling_number(raw_household_path: str) -> DataFrame:
+    """
+    Creates a DataFrame representing household composition and dwelling numbers
+    by processing a raw household data file.
+
+    This function acts as a wrapper around `_read_raw_household` from the
+    `funcs.preproc` module.
 
     Args:
-        raw_household_path (str): Raw household data path
+        raw_household_path (str): The file path to the raw household CSV data.
+                                  This data is expected to be in a format that
+                                  `_read_raw_household` can process.
+
+    Returns:
+        DataFrame: A DataFrame containing processed household data, typically
+                   with columns like 'area', 'adults', 'children', and 'value'
+                   (representing the count of such households).
     """
     return _read_raw_household(raw_household_path)
 

@@ -35,6 +35,27 @@ def validate_vis_movement(
     merge_method: str = "inner",  # left, inner
     apply_factor: bool = False,
 ):
+    """
+    Visualizes and compares modeled commute movement data against truth data (e.g., census).
+
+    Generates two scatter plots: one for the synthetic population's commute patterns
+    and one for the truth data's commute patterns. Points are plotted based on
+    home and work SA2 areas, colored and sized by the total number of commuters.
+
+    Args:
+        val_dir (str): Directory to save the output PNG plots.
+        model_data (DataFrame): DataFrame of modeled commute data. Expected columns:
+            'area_home', 'area_work', 'total' (number of commuters).
+        truth_data (DataFrame): DataFrame of actual commute data (e.g., from census).
+            Expected columns: 'area_home', 'area_work', 'total'.
+        merge_method (str, optional): Method for merging model and truth data
+            (e.g., "inner", "left"). Used to align data for comparison, though
+            the direct comparison isn't plotted here, only separate visualizations.
+            Defaults to "inner".
+        apply_factor (bool, optional): If True, scales the 'total' in `truth_data`
+            by the ratio of total commuters in `model_data` to `truth_data`.
+            Defaults to False.
+    """
 
     x = model_data[model_data["total"] > 10]
     y = truth_data[truth_data["total"] > 10]
@@ -101,17 +122,26 @@ def validate_vis_plot(
     data_title: str,
     output_filename: str,
     x_label: str = None,
-    y_label: str = None,
+    y_label: str | None = None,
     plot_ratio: bool = True,
 ):
-    """Validate vis for plot
+    """
+    Generates and saves a plot for validation purposes.
+
+    If `plot_ratio` is True, it plots the values from `err_data` directly
+    (assuming `err_data` is a dictionary or similar iterable of y-values).
+    If `plot_ratio` is False, it expects `err_data` to be a dictionary
+    with "truth" and "model" keys, and plots these two series against each other.
 
     Args:
-        output_dir (str): Output directory
-        err_ratio (dict): Error ratio
-        data_title (str): Data type, e.g., error for age vs gender
-        x_label (str, optional): x label in text. Defaults to None.
-        y_label (str, optional): y label in text. Defaults to None.
+        output_dir (str): Directory to save the output PNG plot.
+        err_data (dict | list | array-like): Data to plot. Structure depends on `plot_ratio`.
+        data_title (str): Title for the plot.
+        output_filename (str): Base name for the output PNG file (without .png).
+        x_label (str | None, optional): Label for the x-axis. Defaults to None.
+        y_label (str | None, optional): Label for the y-axis. Defaults to None.
+        plot_ratio (bool, optional): If True, plots `err_data` directly. If False,
+            plots "truth" vs "model" from `err_data`. Defaults to True.
     """
     if plot_ratio:
         plot(err_data, "k.")
@@ -131,20 +161,35 @@ def validate_vis_barh(
     err_data: dict,
     data_title: str,
     output_filename: str,
-    x_label: str = None,
-    y_label: str = None,
+    x_label: str | None = None,
+    y_label: str | None = None,
     plot_ratio: bool = True,
     add_polyfit: bool = False,
-    figure_size: tuple or None = None,
+    figure_size: tuple | None = None,
 ):
-    """Validdate vis for barh
+    """
+    Generates and saves a horizontal bar chart for validation purposes.
+
+    If `plot_ratio` is True, it plots error percentages from `err_data` (a dictionary
+    of category: error_value).
+    If `plot_ratio` is False, it plots "truth" vs "model" values from `err_data`
+    (a dictionary with "truth" and "model" keys, each holding category: value dicts).
+    Optionally, it can add polynomial fit lines to the truth/model bars.
 
     Args:
-        output_dir (str): Output directory
-        err_ratio (dict): Error ratio
-        data_title (str): Data type, e.g., error for age vs gender
-        x_label (str, optional): x label in text. Defaults to None.
-        y_label (str, optional): y label in text. Defaults to None.
+        output_dir (str): Directory to save the output PNG plot.
+        err_data (dict): Data to plot. Structure depends on `plot_ratio`.
+        data_title (str): Title for the plot.
+        output_filename (str): Base name for the output PNG file (without .png).
+        x_label (str | None, optional): Label for the x-axis. Defaults to None.
+        y_label (str | None, optional): Label for the y-axis (typically category names).
+                                     Defaults to None.
+        plot_ratio (bool, optional): If True, plots error ratios. If False, plots
+            truth vs model values. Defaults to True.
+        add_polyfit (bool, optional): If True and `plot_ratio` is False, adds a
+            3rd-degree polynomial fit line for truth and model bars. Defaults to False.
+        figure_size (tuple | None, optional): Tuple specifying (width, height) of
+            the figure. Defaults to None (Matplotlib default).
     """
     # Create figure and axes
     if figure_size is None:
@@ -208,11 +253,18 @@ def validate_vis_barh(
 
 
 def plot_pie_charts(output_dir: str, df: DataFrame):
-    """Plot pie charts for a dataframe
+    """
+    Generates and saves pie charts for categorical columns and histograms
+    for numerical columns in a DataFrame.
+
+    For each column in the DataFrame:
+    - If the column is numerical (int64, float64), a histogram with KDE is plotted.
+    - If the column is categorical, a pie chart of value counts is plotted.
+    Each plot is saved as a PNG file named after the column in `output_dir`.
 
     Args:
-        output_dir (str): Where to save the plots
-        df (DataFrame): dataframe to plot
+        output_dir (str): The directory where the output PNG plots will be saved.
+        df (DataFrame): The DataFrame to analyze and plot.
     """
     for column in df.columns:
         if df[column].dtype in ["int64", "float64"]:
@@ -227,6 +279,17 @@ def plot_pie_charts(output_dir: str, df: DataFrame):
 
 
 def plot_map_html(output_dir: str, df: DataFrame, data_name: str):
+    """
+    Generates and saves an HTML file containing a Folium map with a heatmap layer.
+
+    The map is centered at the mean latitude and longitude of the input DataFrame.
+    A heatmap is generated from the 'latitude' and 'longitude' points in the DataFrame.
+
+    Args:
+        output_dir (str): Directory to save the output HTML file.
+        df (DataFrame): DataFrame containing 'latitude' and 'longitude' columns.
+        data_name (str): Base name for the output HTML file (without .html).
+    """
     # Create a map centered at an average location
     m = folium_map(
         location=[df["latitude"].mean(), df["longitude"].mean()], zoom_start=14
@@ -240,12 +303,18 @@ def plot_map_html(output_dir: str, df: DataFrame, data_name: str):
 
 
 def plot_travel_html(output_dir: str, df: DataFrame, data_name: str):
-    """Plot travel trips
+    """
+    Generates and saves an HTML file containing a Folium map displaying travel trips as lines.
+
+    The map is centered at the mean start latitude and longitude of the trips.
+    Each row in the DataFrame, representing a trip, is plotted as a PolyLine
+    from ('start_lat', 'start_lon') to ('end_lat', 'end_lon').
 
     Args:
-        output_dir (str): Where to store the data
-        df (DataFrame): data to be plotted
-        data_name (str): data name to be stored
+        output_dir (str): Directory to save the output HTML file.
+        df (DataFrame): DataFrame of travel trips. Expected columns:
+                        'start_lat', 'start_lon', 'end_lat', 'end_lon'.
+        data_name (str): Base name for the output HTML file (without .html).
     """
 
     m = folium_map(
@@ -266,7 +335,22 @@ def plot_travel_html(output_dir: str, df: DataFrame, data_name: str):
     m.save(join(output_dir, f"{data_name}.html"))
 
 
-def plot_location_timeseries_charts(output_dir: str, location_counts: dict):
+def plot_location_timeseries_charts(output_dir: str, location_counts: dict[str, dict[int, int]]):
+    """
+    Generates and saves time series plots showing the number of people at
+    different location types for each hour.
+
+    For each location type (key in `location_counts`), a line plot is created
+    showing the count of people at that location type over 24 hours.
+    Each plot is saved as a PNG file named "{location_type}_distribution.png".
+
+    Args:
+        output_dir (str): Directory to save the output PNG plots.
+        location_counts (dict[str, dict[int, int]]): A dictionary where outer keys
+            are location type names (e.g., "home", "work") and inner dictionaries
+            map integer hours (0-23) to the count of people at that location type
+            during that hour.
+    """
 
     for proc_loc in location_counts:
         proc_data = location_counts[proc_loc]
@@ -289,6 +373,22 @@ def plot_location_occurence_charts_by_hour(
     hour: int,
     data_type: str,
 ):
+    """
+    Generates and saves a bar chart showing the distribution of the number of
+    people at different specific locations of a given `data_type` at a specific `hour`.
+
+    For example, if `data_type` is "supermarket" and `hour` is 10, this plots
+    how many supermarkets have 0 people, 1 person, 2 people, etc., at 10:00.
+
+    Args:
+        output_dir (str): Directory to save the output PNG plot.
+        location_counts (dict): A dictionary where keys are specific location IDs
+                                (e.g., "supermarket_A", "supermarket_B") and values
+                                are the count of people at that location at the given `hour`.
+        hour (int): The specific hour for which the distribution is plotted.
+        data_type (str): The generic type of location (e.g., "supermarket"), used
+                         for titling and file naming.
+    """
     counts = list(location_counts.values())
 
     counts_processed = Counter(counts)
@@ -308,7 +408,19 @@ def plot_location_occurence_charts_by_hour(
     close()
 
 
-def plot_average_occurence_charts(output_dir: str, data_counts: list, data_type: str):
+def plot_average_occurence_charts(output_dir: str, data_counts: list[float], data_type: str):
+    """
+    Generates and saves a line plot showing the average number of people per
+    location of a specific `data_type` over time (presumably hourly).
+
+    Args:
+        output_dir (str): Directory to save the output PNG plot.
+        data_counts (list[float]): A list where each element is the average
+                                   number of people per location of `data_type`
+                                   for a specific time step (e.g., hour).
+        data_type (str): The generic type of location (e.g., "supermarket"),
+                         used for titling and file naming.
+    """
 
     plot(data_counts)
     title(f"Average number of people per {data_type}")

@@ -9,13 +9,21 @@ from funcs import LOCATIONS_CFG
 def plot_diary_percentage(
     data_to_plot: DataFrame,
     diary_vis_path: str,
-    title_str: str or None = None,
+    title_str: str | None = None,
     color_unknown: str = "#bfbfbd",
 ):
-    """Plot diary percentage
+    """
+    Generates and saves a stacked bar plot showing the percentage of different
+    locations people are at for each hour of the day.
 
     Args:
-        output_path (str): _description_
+        data_to_plot (DataFrame): DataFrame containing diary data with "Hour"
+                                  and "Location" columns.
+        diary_vis_path (str): Filepath to save the generated plot.
+        title_str (str | None, optional): Optional additional title string to append
+                                       to the default plot title. Defaults to None.
+        color_unknown (str, optional): Hex color code for locations not found in
+                                   LOCATIONS_CFG. Defaults to "#bfbfbd".
     """
 
     df_grouped = data_to_plot.groupby(["Hour", "Location"]).size().unstack(fill_value=0)
