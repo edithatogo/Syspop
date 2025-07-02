@@ -1,8 +1,23 @@
+# MAPING_DIARY_CFG_LLM_DIARY: Maps location names from LLM-generated diaries
+# to standardized Syspop location types.
+# Used in `create_diary_single_person_llm`.
+# Format: { "standard_syspop_location": ["llm_location_alias1", "llm_location_alias2", ...] }
 MAPING_DIARY_CFG_LLM_DIARY = {
-    "company": ["office"],
-    "household": ["home"],
+    "company": ["office"],  # LLM's "office" is mapped to Syspop's "company"
+    "household": ["home"],  # LLM's "home" is mapped to Syspop's "household"
 }
 
+# DIARY_CFG: Configuration for rule-based diary generation.
+# Defines activities, their probabilities, time constraints, and modifiers.
+# - Top-level keys: Person types (e.g., "worker", "student", "default").
+# - "random_seeds": List of activities to choose from if no other specific activity
+#                   is selected based on weight and time constraints.
+# - Each activity (e.g., "household", "company"):
+#   - "weight": Base probability/propensity for this activity.
+#   - "time_ranges": List of (start_hour, end_hour) tuples when this activity can occur.
+#   - "age_weight": Optional dict mapping age ranges (e.g., "0-5") to weight multipliers.
+#   - "time_weight": Optional dict mapping hour ranges (e.g., "7-8") to weight multipliers.
+#   - "max_occurrence": Optional integer limiting how many times this activity can occur in a day.
 DIARY_CFG = {
     "worker": {
         "random_seeds": ["household", "travel", "company"],
@@ -117,7 +132,10 @@ DIARY_CFG = {
     },
 }
 
-
+# SHARED_SPACE_NEAREST_DISTANCE_KM: Defines the maximum search radius (in km)
+# for finding the nearest shared spaces of a particular type from a household's area.
+# Used in `find_nearest_shared_space_from_household`.
+# Format: { "shared_space_type": distance_in_km }
 SHARED_SPACE_NEAREST_DISTANCE_KM = {
     "restaurant": 5.0,
     "fast_food": 5.0,
@@ -128,7 +146,8 @@ SHARED_SPACE_NEAREST_DISTANCE_KM = {
     "department_store": 15.0,
     "wholesale": 10.0,
     "park": 10.0,
-    "hospital": 50.0
+    "hospital": 50.0,
 }
 
+# NZ_DATA_DEFAULT: Default directory path for New Zealand specific test data.
 NZ_DATA_DEFAULT = "etc/data/test_data"

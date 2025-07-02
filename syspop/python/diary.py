@@ -389,17 +389,17 @@ def quality_check_diary(
 
         proc_people_id = proc_people_diary["id"]
         proc_people_attr = synpop_data.loc[proc_people_id]
-        try:
-            for proc_hr in range(24):
-
-                if (
-                    proc_people_diary.iloc[proc_hr] in diary_to_check
-                    and proc_people_attr[proc_people_diary.iloc[proc_hr]] is None
-                ):
+        # Iterate through each hour of the person's diary
+        for proc_hr in range(24):
+            activity_type = proc_people_diary.iloc[proc_hr]
+            # Check if the activity type is one that needs validation (e.g., "school")
+            if activity_type in diary_to_check:
+                # If the agent is supposed to be at this activity type,
+                # but doesn't have a specific instance of it assigned in synpop_data
+                # (e.g., at "school" but proc_people_attr["school"] is None),
+                # then change the activity to the default_place (e.g., "household").
+                if proc_people_attr.get(activity_type) is None:
                     proc_people_diary.at[proc_hr] = default_place
-        except:
-            x = 3
-
         return proc_people_diary
 
     return diary_data.apply(_check_diary, axis=1)
@@ -445,9 +445,9 @@ def map_loc_to_diary(output_dir: str):
     def _match_person_diary(
         proc_people: DataFrame,
         known_missing_locs: list = ["gym", "others", "outdoor"],
-        proc_diray_mapping = {
-            "kindergarten": "school",
-            "company": "employer"
+        proc_diray_mapping: dict = {  # Maps diary types to synpop_data column names
+            "kindergarten": "school", # e.g., diary "kindergarten" maps to "school" column
+            "company": "employer"     # diary "company" maps to "employer" column
         }
     ):
         proc_people_id = proc_people["id"]

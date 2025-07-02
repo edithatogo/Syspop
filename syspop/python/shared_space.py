@@ -196,6 +196,8 @@ def find_nearest_shared_space_from_household(
         proc_names = []
         for j, index in enumerate(indices):
             proc_dis = distance_value[i, j]
+            # SHARED_SPACE_NEAREST_DISTANCE_KM is in km, proc_dis is in decimal degrees.
+            # Approximate conversion: 1 degree latitude ~ 111 km. Using 110 as a rough factor.
             if proc_dis > SHARED_SPACE_NEAREST_DISTANCE_KM[shared_space_type] / 110.0:
                 total_missing += 1
                 continue
