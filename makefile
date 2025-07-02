@@ -73,3 +73,9 @@ create_nz_data:
 # -----------------------
 run_syspop_nz:
 	nohup python syspop/run_nz.py >& log.syspop &
+
+# -----------------------
+# Linting
+# -----------------------
+lint:
+	ruff check .
