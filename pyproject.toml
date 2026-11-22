@@ -6,7 +6,7 @@ authors = [
     {name = "Noa",email = "noa@example.com"}
 ]
 readme = "README.md"
-requires-python = "^3.10"
+requires-python = ">=3.10,<3.13"
 packages = [
     { include = "syspop" }
 ]

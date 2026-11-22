@@ -31,7 +31,6 @@ mypy = "*"
 bandit = "*"
 vulture = "*"
 poetry = "*" # For poetry commands if still needed, or manage scripts via pixi tasks
-task = "*"   # For go-task if still needed
 
 [tasks]
 lint = "ruff check . && bandit -r . && vulture . --min-confidence 80"
@@ -39,8 +38,7 @@ format = "ruff format ."
 test = "mypy syspop/python/ syspop/etc/scripts_nz/"
 all = "pixi run format && pixi run lint && pixi run test"
 
-[scripts]
-syspop = { cmd = "python -m syspop.syspop create" } # Example, adjust if syspop is a direct executable after poetry/pixi build
+syspop = "python -m syspop.syspop create"
 
 [target.linux-64.dependencies]
 # Linux specific dependencies if any
