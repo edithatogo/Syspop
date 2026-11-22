@@ -31,7 +31,6 @@ mypy = "*"
 bandit = "*"
 vulture = "*"
 poetry = "*" # For poetry commands if still needed, or manage scripts via pixi tasks
-task = "*"   # For go-task if still needed
 
 [tasks]
 lint = "ruff check . && bandit -r . && vulture . --min-confidence 80"
